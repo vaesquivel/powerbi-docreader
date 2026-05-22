@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power BI DocReader v1.0</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#e8e8e8;color:#1a1a2e}
+
+/* ── TELA INICIAL ── */
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;background:#0f1629}
+.logo-bar{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,#4f8ef7,#a78bfa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:21px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.logo-text span{color:#4f8ef7}
+.logo-badge{background:#4f8ef722;border:1px solid #4f8ef744;color:#7ab4ff;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.hero-title{font-size:44px;font-weight:800;text-align:center;line-height:1.15;margin-bottom:14px;color:#fff;letter-spacing:-1px}
+.hero-title .hl{color:#4f8ef7}
+.hero-title .hl2{color:#a78bfa}
+.hero-sub{color:#64748b;text-align:center;max-width:500px;margin-bottom:36px;font-size:15px;line-height:1.65}
+.drop-zone{width:100%;max-width:560px;border:2px dashed #1e3a5f;border-radius:16px;background:#131c2e;padding:56px 40px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:28px}
+.drop-zone:hover,.drop-zone.dragover{border-color:#4f8ef7;background:#172040}
+.dz-icon{font-size:48px;margin-bottom:14px}
+.dz-text{font-size:18px;font-weight:700;color:#cbd5e1;margin-bottom:5px}
+.dz-text span{color:#4f8ef7}
+.dz-sub{color:#475569;font-size:13px}
+#fileInput{display:none}
+.features{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:600px}
+.feat{background:#131c2e;border:1px solid #1e3a5f;border-radius:10px;padding:13px 14px;display:flex;flex-direction:column;align-items:center;gap:5px;width:108px;text-align:center}
+.feat .fi{font-size:19px}
+.feat .ft{font-size:10px;color:#64748b;line-height:1.35;font-weight:500}
+.credit{margin-top:36px;color:#334155;font-size:11px;text-align:center}
+
+/* ── LOADING ── */
+#loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0f1629;gap:18px}
+.spinner{width:44px;height:44px;border:3px solid #1e3a5f;border-top-color:#4f8ef7;border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingText{color:#64748b;font-size:14px;font-weight:500}
+
+/* ── TOOLBAR ── */
+#toolbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:#1a1a2e;z-index:999;align-items:center;justify-content:space-between;padding:0 28px;box-shadow:0 2px 20px rgba(0,0,0,.4)}
+#toolbar span{color:#64748b;font-size:13px}
+#toolbar strong{color:#fff}
+.tbtn{background:#4f8ef7;border:none;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;transition:background .2s}
+.tbtn:hover{background:#3a7de0}
+.tbtn.sec{background:transparent;border:1px solid #ffffff22;color:#94a3b8;margin-right:8px}
+.tbtn.sec:hover{border-color:#ffffff55;color:#fff}
+
+/* ── PÁGINAS A4 ── */
+#reportWrap{padding-top:64px;padding-bottom:40px}
+.page{width:794px;min-height:1123px;background:#fff;margin:24px auto;box-shadow:0 4px 40px rgba(0,0,0,.18);position:relative;overflow:hidden;page-break-after:always}
+.page-num{position:absolute;bottom:26px;right:34px;font-size:11px;color:#aaa;letter-spacing:.5px}
+.page-footer{position:absolute;bottom:20px;left:40px;font-size:10px;color:#ccc;letter-spacing:.3px}
+
+/* ── CAPA ── */
+.cover{background:linear-gradient(160deg,#0d0d2e 0%,#1a1a4e 50%,#0d1a3e 100%);color:#fff;min-height:1123px;display:flex;flex-direction:column}
+.cover-accent{position:absolute;top:-80px;right:-80px;width:420px;height:420px;background:radial-gradient(circle,#4f8ef722 0%,transparent 70%);pointer-events:none}
+.cover-accent2{position:absolute;bottom:60px;left:-60px;width:320px;height:320px;background:radial-gradient(circle,#a78bfa18 0%,transparent 70%);pointer-events:none}
+.cover-header{padding:36px 48px 0;display:flex;justify-content:space-between;align-items:center}
+.cover-logo{display:flex;align-items:center;gap:10px}
+.cover-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#4f8ef7,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.cover-logo-text{font-size:12px;font-weight:800;color:#a0c0ff;letter-spacing:.6px;text-transform:uppercase}
+.cover-badge{background:#4f8ef722;border:1px solid #4f8ef744;color:#7ab4ff;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:52px 48px 32px}
+.cover-tag{display:inline-block;background:#4f8ef718;border:1px solid #4f8ef733;color:#7ab4ff;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+.cover-title{font-size:40px;font-weight:800;line-height:1.1;margin-bottom:8px;letter-spacing:-1.5px}
+.cover-title span{color:#a78bfa}
+.cover-sub{font-size:14px;color:#607090;margin-bottom:42px}
+.cover-meta{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #ffffff14;border-radius:12px;overflow:hidden}
+.cmi{padding:13px 18px;border-right:1px solid #ffffff0d;border-bottom:1px solid #ffffff0d}
+.cmi:nth-child(even){border-right:none}
+.cmi:nth-last-child(-n+2){border-bottom:none}
+.cmi-label{font-size:9px;color:#405070;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.cmi-value{font-size:13px;color:#c0d8ff;font-weight:600}
+.cover-score{margin-top:32px;display:flex;align-items:center;gap:20px}
+.cover-score-num{font-size:52px;font-weight:800;line-height:1}
+.cover-score-bar{flex:1;height:8px;background:#ffffff14;border-radius:8px;overflow:hidden}
+.cover-score-fill{height:100%;border-radius:8px}
+.cover-score-label{font-size:11px;color:#607090;margin-top:3px}
+.cover-footer{padding:22px 48px;border-top:1px solid #ffffff0d;display:flex;justify-content:space-between;align-items:center}
+.cover-footer-l{font-size:11px;color:#304060}
+.cover-footer-r{font-size:10px;color:#243050;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+
+/* ── CABEÇALHO INTERNO ── */
+.page-header{height:54px;background:#f8f9ff;border-bottom:3px solid #4f8ef7;display:flex;align-items:center;padding:0 40px;justify-content:space-between}
+.ph-title{font-size:11px;font-weight:800;color:#4f8ef7;letter-spacing:.8px;text-transform:uppercase}
+.ph-report{font-size:11px;color:#bbb;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page-body{padding:32px 40px 56px}
+
+/* ── TÍTULOS DE SEÇÃO ── */
+.sec-title{font-size:21px;font-weight:800;color:#1a1a2e;margin-bottom:4px;display:flex;align-items:center;gap:10px;letter-spacing:-.4px}
+.sec-bar{width:4px;height:24px;background:linear-gradient(180deg,#4f8ef7,#a78bfa);border-radius:4px;flex-shrink:0}
+.sec-sub{font-size:12px;color:#999;margin-bottom:20px;margin-left:14px}
+.sec-h2{font-size:14px;font-weight:800;color:#1a1a2e;margin:22px 0 9px;padding-bottom:5px;border-bottom:1px solid #e8e8f0}
+.sec-h3{font-size:11px;font-weight:800;color:#4f8ef7;margin:13px 0 7px;text-transform:uppercase;letter-spacing:.7px}
+
+/* ── STATS GRID ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:22px}
+.stat{border:1px solid #e8e8f0;border-radius:11px;padding:14px 10px;text-align:center;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.s-blue::before{background:#4f8ef7} .s-purple::before{background:#a78bfa}
+.s-green::before{background:#34d399} .s-orange::before{background:#f59e0b}
+.s-red::before{background:#f87171}   .s-pink::before{background:#f472b6}
+.stat-num{font-size:28px;font-weight:800;margin-bottom:2px;line-height:1}
+.s-blue .stat-num{color:#4f8ef7} .s-purple .stat-num{color:#a78bfa}
+.s-green .stat-num{color:#34d399} .s-orange .stat-num{color:#f59e0b}
+.s-red .stat-num{color:#f87171}   .s-pink .stat-num{color:#f472b6}
+.stat-lbl{font-size:10px;color:#999}
+
+/* ── TABELAS ── */
+table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:14px}
+thead th{background:#1a1a2e;color:#fff;padding:8px 11px;text-align:left;font-weight:700;font-size:10.5px;letter-spacing:.3px}
+tbody td{padding:7px 11px;border-bottom:1px solid #f0f0f8;vertical-align:top;color:#333;line-height:1.4}
+tbody tr:nth-child(even) td{background:#f8f9ff}
+tbody tr:hover td{background:#f0f4ff}
+.tr-hidden td{background:#fff0f0 !important}
+.tr-bidir td{background:#fff0f0 !important}
+.tr-unused td{background:#fff5f5 !important}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap;margin:1px}
+.b-blue{background:#e8f0fe;color:#1a73e8}   .b-green{background:#e6f4ea;color:#137333}
+.b-red{background:#fce8e6;color:#c5221f}     .b-yellow{background:#fef7e0;color:#b06000}
+.b-gray{background:#f1f3f4;color:#5f6368}    .b-purple{background:#f3e8ff;color:#6d28d9}
+.b-pink{background:#fce7f3;color:#9d174d}    .b-navy{background:#e8edf8;color:#1B2A4A}
+
+/* ── BLOCOS DE CÓDIGO ── */
+.code{background:#f4f4f8;border:1px solid #e0e0ec;border-radius:8px;padding:10px 13px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#1a1a2e;margin:5px 0 10px;white-space:pre-wrap;word-break:break-all;line-height:1.65;border-left:3px solid #4f8ef7}
+.code.unused-code{border-left-color:#f87171}
+
+/* ── ALERTAS ── */
+.alert{padding:10px 15px;border-radius:0 8px 8px 0;margin:6px 0;font-size:12px;line-height:1.5}
+.a-warn{background:#fef9ec;border-left:4px solid #f59e0b}
+.a-ok{background:#edfaf4;border-left:4px solid #34d399}
+.a-err{background:#fef2f2;border-left:4px solid #f87171}
+.a-info{background:#eff6ff;border-left:4px solid #4f8ef7}
+
+/* ── MEDIDAS ── */
+.measure-card{border:1px solid #e8e8f0;border-radius:10px;padding:12px 14px;margin-bottom:9px;border-left:4px solid #4f8ef7}
+.measure-card.unused{border-left-color:#f87171;opacity:.88}
+.m-name{font-weight:800;font-size:12.5px;color:#1a1a2e;margin-bottom:5px}
+.m-table{font-size:10px;color:#999;margin-bottom:3px}
+
+/* ── RELAÇÕES ── */
+.rel-row{display:flex;align-items:center;gap:7px;padding:8px 13px;background:#f8f9ff;border-radius:8px;margin-bottom:5px;font-size:11.5px;flex-wrap:wrap}
+.rel-row.bidir{background:#fff5f5}
+.rel-from{font-weight:800;color:#1a73e8}
+.rel-arrow{color:#a78bfa;font-size:15px}
+.rel-to{font-weight:800;color:#1a73e8}
+.rel-col{color:#999;font-size:10px}
+.rel-inactive{opacity:.55}
+
+/* ── SELEÇÃO/CAMADAS ── */
+.layer-row{display:flex;align-items:center;gap:9px;padding:6px 11px;border-radius:7px;margin-bottom:3px;font-size:11.5px}
+.layer-row:nth-child(odd){background:#f8f9ff}
+.layer-num{color:#ccc;font-size:10px;min-width:16px;text-align:right}
+.layer-name{flex:1;font-weight:600}
+.layer-hidden-name{color:#bbb;font-style:italic}
+.layer-info{font-size:10px;color:#bbb}
+
+/* ── CHECKLIST ── */
+.check-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f8;font-size:12px}
+.ch-ok{color:#137333;font-weight:700}
+.ch-fail{color:#c5221f;font-weight:700}
+.ch-neutral{color:#999}
+
+/* ── SCORE ── */
+.score-big{font-size:62px;font-weight:800;line-height:1}
+.score-bar{height:10px;background:#e8e8f0;border-radius:10px;overflow:hidden;margin:9px 0}
+.score-fill{height:100%;border-radius:10px}
+
+/* ── TOC ── */
+.toc-item{display:flex;align-items:baseline;padding:7px 0;border-bottom:1px dotted #e8e8f0;font-size:12.5px}
+.toc-num{color:#4f8ef7;font-weight:700;min-width:26px;font-size:12.5px}
+.toc-title{color:#333;flex-shrink:0;max-width:380px}
+.toc-dots{flex:1;border-bottom:1px dotted #ddd;margin:0 8px;height:1px;align-self:center}
+.toc-page{color:#aaa;font-size:11px}
+
+/* ── PRINT ── */
+@media print{
+  body{background:#fff;padding-top:0}
+  #toolbar,#landing,#loading{display:none!important}
+  #reportWrap{padding-top:0}
+  .page{margin:0;box-shadow:none;page-break-after:always}
+  .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  thead th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .stat::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<!-- ── TELA INICIAL ── -->
+<div id="landing">
+  <div class="logo-bar">
+    <div class="logo-icon">⊞</div>
+    <span class="logo-text">Power BI <span>DocReader</span></span>
+    <span class="logo-badge">Leitura real do .pbit</span>
+  </div>
+  <h1 class="hero-title">Documentação técnica <span class="hl">real</span> do seu<br><span class="hl2">Power BI</span></h1>
+  <p class="hero-sub">Faça upload do <strong style="color:#e2e8f0">.pbit</strong> — lemos o arquivo internamente (ZIP + JSON). Nenhum dado sai do navegador.</p>
+  <div class="drop-zone" id="dropZone">
+    <div class="dz-icon">📂</div>
+    <div class="dz-text">Arraste seu <span>.pbit</span> aqui</div>
+    <div class="dz-sub">ou clique para selecionar</div>
+    <input type="file" id="fileInput" accept=".pbit">
+  </div>
+  <div class="features">
+    <div class="feat"><div class="fi">Σ</div><div class="ft">Medidas DAX + não usadas</div></div>
+    <div class="feat"><div class="fi">🗂</div><div class="ft">Tabelas + tipos automáticos</div></div>
+    <div class="feat"><div class="fi">⇄</div><div class="ft">Relações + direção</div></div>
+    <div class="feat"><div class="fi">⚙</div><div class="ft">Power Query (código M)</div></div>
+    <div class="feat"><div class="fi">👁</div><div class="ft">Visuais + campos + filtros</div></div>
+  </div>
+  <p class="credit">Desenvolvido por Vanessa Costa · Power BI DocReader v1.0 · Powered by IA Claude (Anthropic)</p>
+</div>
+
+<!-- ── LOADING ── -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingText">Lendo arquivo...</div>
+</div>
+
+<!-- ── TOOLBAR ── -->
+<div id="toolbar">
+  <div><strong>Power BI DocReader</strong> <span id="tbFilename">—</span></div>
+  <div>
+    <button class="tbtn sec" onclick="resetApp()">↩ Novo arquivo</button>
+    <button class="tbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+  </div>
+</div>
+
+<!-- ── RELATÓRIO ── -->
+<div id="reportWrap" style="display:none"></div>
+
+<script>
+// ─────────────────────────────────────────
+// Mapeamento de tipos visuais
+// ─────────────────────────────────────────
+const VL={card:"Card",cardVisual:"Card (Novo)",multiRowCard:"Card Multi-linha",kpi:"KPI",
+  barChart:"Barras",clusteredBarChart:"Barras Agrupadas",columnChart:"Colunas",
+  clusteredColumnChart:"Colunas Agrupadas",stackedBarChart:"Barras Empilhadas",
+  stackedColumnChart:"Colunas Empilhadas",lineChart:"Linhas",areaChart:"Área",
+  lineStackedColumnComboChart:"Linha+Coluna",ribbonChart:"Faixa",waterfallChart:"Cascata",
+  funnelChart:"Funil",pieChart:"Pizza",donutChart:"Rosca",treemap:"Treemap",
+  scatterChart:"Dispersão",gauge:"Medidor",tableEx:"Tabela",matrix:"Matriz",
+  map:"Mapa",filledMap:"Mapa Coroplético",slicer:"Slicer",textbox:"Caixa de Texto",
+  image:"Imagem",shape:"Forma",actionButton:"Botão",basicShape:"Forma Básica",
+  decompositionTree:"Árvore Decomposição",smartNarrativeVisual:"Narrativa Inteligente"};
+const vtype=t=>VL[t]||t||"Desconhecido";
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ─────────────────────────────────────────
+// Drag & Drop / File Input
+// ─────────────────────────────────────────
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+dropZone.addEventListener('click',()=>fileInput.click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');processFile(e.dataTransfer.files[0])});
+fileInput.addEventListener('change',e=>processFile(e.target.files[0]));
+
+function resetApp(){
+  document.getElementById('landing').style.display='flex';
+  document.getElementById('toolbar').style.display='none';
+  document.getElementById('reportWrap').style.display='none';
+  fileInput.value='';
+}
+function setLoading(msg){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('reportWrap').style.display='none';
+  document.getElementById('toolbar').style.display='none';
+  document.getElementById('loadingText').textContent=msg;
+}
+
+// ─────────────────────────────────────────
+// Decodificação UTF-16-LE
+// ─────────────────────────────────────────
+function smartDecode(u8){
+  if(!u8||!u8.length)return'{}';
+  if(u8[0]===0xFF&&u8[1]===0xFE)return new TextDecoder('utf-16-le').decode(u8.slice(2));
+  if((u8[0]===0x7B&&u8[1]===0x00)||(u8[0]===0x5B&&u8[1]===0x00))return new TextDecoder('utf-16-le').decode(u8);
+  if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF)return new TextDecoder('utf-8').decode(u8.slice(3));
+  return new TextDecoder('utf-8').decode(u8);
+}
+function safeParse(txt){
+  try{const c=txt.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').trim();return c?JSON.parse(c):{}}
+  catch(e){return{}}
+}
+async function readJSON(zip,name){
+  try{const e=zip.files[name];if(!e)return{};return safeParse(smartDecode(await e.async('uint8array')))}catch{return{}}
+}
+async function readTxt(zip,name){
+  try{const e=zip.files[name];if(!e)return'';return smartDecode(await e.async('uint8array')).trim().replace(/^"|"$/g,'')}catch{return''}
+}
+
+// ─────────────────────────────────────────
+// Processar arquivo
+// ─────────────────────────────────────────
+async function processFile(file){
+  if(!file)return;
+  if(!file.name.endsWith('.pbit')){alert('Selecione um arquivo .pbit');return}
+  setLoading('Lendo '+file.name+'...');
+  await sleep(50);
+  try{
+    const zip=await JSZip.loadAsync(file);
+    const names=Object.keys(zip.files);
+    setLoading('Processando modelo...');await sleep(30);
+    const schema=await readJSON(zip,'DataModelSchema');
+    const layout=await readJSON(zip,'Report/Layout');
+    const connections=await readJSON(zip,'Connections');
+    const version=await readTxt(zip,'Version');
+    const themeFiles=names.filter(n=>n.startsWith('Report/StaticResources/SharedResources/BaseThemes/')&&n.endsWith('.json'));
+    const theme=themeFiles.length?await readJSON(zip,themeFiles[0]):{};
+    const themeFile=themeFiles.length?themeFiles[0].split('/').pop():'';
+    const cvFiles=names.filter(n=>n.endsWith('package.json')&&n.includes('CustomVisuals'));
+    const cvs=[];
+    for(const f of cvFiles){const p=await readJSON(zip,f);if(p.name)cvs.push(p)}
+    const staticRes=names.filter(n=>n.includes('StaticResources/RegisteredResources/')&&!n.endsWith('/')).map(n=>n.split('/').pop());
+    const zipFiles=names.filter(n=>!n.endsWith('/'));
+    setLoading('Gerando documentação...');await sleep(30);
+    const data={filename:file.name,schema,layout,connections,version,theme,themeFile,customVisuals:cvs,staticResources:staticRes,zipFiles,generated:new Date()};
+    const md=processSchema(schema);
+    const ld=processLayout(layout);
+    // rastrear medidas usadas
+    const usedNames=new Set();
+    ld.pages.forEach(pg=>pg.visuals.forEach(v=>v.usedMeasures.forEach(m=>usedNames.add(m))));
+    md.measures.forEach(m=>{m._used=usedNames.size===0||usedNames.has(m.name);m._unused=usedNames.size>0&&!usedNames.has(m.name)});
+    const score=calcScore(md);
+    document.getElementById('tbFilename').textContent='— '+file.name;
+    document.getElementById('loading').style.display='none';
+    document.getElementById('toolbar').style.display='flex';
+    document.getElementById('reportWrap').style.display='block';
+    renderReport(data,md,ld,score);
+  }catch(err){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('landing').style.display='flex';
+    alert('Erro ao processar: '+err.message);console.error(err);
+  }
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ─────────────────────────────────────────
+// Processamento do Schema
+// ─────────────────────────────────────────
+function processSchema(schema){
+  const model=schema.model||schema;
+  const res={tables:[],relations:[],measures:[],columnCalc:[],partitionsM:[],roles:model.roles||[]};
+  for(const tbl of (model.tables||[])){
+    const n=tbl.name||'',nl=n.toLowerCase(),hidden=!!tbl.isHidden;
+    const cols=tbl.columns||[],measures=tbl.measures||[],hierarchies=tbl.hierarchies||[];
+    let type;
+    if(/localdatetable|datetabletemplate/.test(nl))type='Calendário (Sistema)';
+    else if(/calendar|calendário/.test(nl))type='Calendário';
+    else if(nl.startsWith('_'))type='Tabela de Medidas';
+    else if(/^f[^o]/.test(nl))type='Fato';
+    else if(/^d[^u]/.test(nl))type='Dimensão';
+    else if(hidden)type='Sistema';
+    else type='—';
+    const tinfo={name:n,type,hidden,colCount:cols.length,measureCount:measures.length,hierarchyCount:hierarchies.length,columns:[],hierarchies};
+    for(const c of cols){
+      const calc=c.type==='calculated';
+      tinfo.columns.push({name:c.name||'',dataType:c.dataType||'',calculated:calc?'DAX':'—',expression:c.expression||'',formatString:c.formatString||'',hidden:!!c.isHidden});
+      if(calc&&c.expression){let ex=c.expression;if(Array.isArray(ex))ex=ex.join('\n');res.columnCalc.push({table:n,column:c.name||'',expression:ex,dataType:c.dataType||''})}
+    }
+    res.tables.push(tinfo);
+    for(const m of measures){let ex=m.expression||'';if(Array.isArray(ex))ex=ex.join('\n');res.measures.push({table:n,name:m.name||'',expression:ex,formatString:m.formatString||'',description:m.description||'',displayFolder:m.displayFolder||'',hidden:!!m.isHidden})}
+    for(const p of (tbl.partitions||[])){const src=p.source||{};if(src.type==='m'){let ex=src.expression||'';if(Array.isArray(ex))ex=ex.join('\n');if(ex)res.partitionsM.push({table:n,partition:p.name||'',mode:p.mode||'',expression:ex})}}
+  }
+  for(const r of (model.relationships||[]))res.relations.push({fromTable:r.fromTable||'',fromCol:r.fromColumn||'',toTable:r.toTable||'',toCol:r.toColumn||'',direction:r.crossFilteringBehavior||'oneDirection',active:r.isActive!==false});
+  return res;
+}
+
+// ─────────────────────────────────────────
+// Processamento do Layout
+// ─────────────────────────────────────────
+function processLayout(layout){
+  const pages=[],bookmarks=[];
+  try{const cfg=typeof layout.config==='string'?JSON.parse(layout.config):(layout.config||{});(cfg.bookmarks||[]).forEach(bm=>bookmarks.push({name:bm.displayName||bm.name||'',group:bm.bookmarkGroup||'',captureFilters:!!(bm.options||{}).captureFilters,captureVisibility:!!(bm.options||{}).captureVisibility,captureData:!!(bm.options||{}).captureData}))}catch{}
+  for(const sec of (layout.sections||[])){
+    const disp=sec.displayOption||1;
+    const pgType=disp===4||disp===5?'Tooltip':disp===2?'Drill-through':'Principal';
+    const visuals=[];
+    for(const vc of (sec.visualContainers||[])){
+      let cfg={};try{cfg=typeof vc.config==='string'?JSON.parse(vc.config):(vc.config||{})}catch{}
+      const sv=cfg.singleVisual||{};const vt=sv.visualType||'';
+      let title='';try{const ta=(sv.vcObjects||{}).title||[{}];const tp=(ta[0]||{}).properties||{};const tv=((tp.text||{}).expr||{}).Literal||{};title=(tv.Value||'').replace(/^'|'$/g,'')}catch{}
+      const fonts=new Set();xFonts(sv,fonts);
+      const usedMeasures=new Set();xMeasures(sv,usedMeasures);
+      const hidden=vc.isHidden===true||cfg.isHidden===true;
+      visuals.push({type:vt,label:vtype(vt),title,x:vc.x||0,y:vc.y||0,w:vc.width||0,h:vc.height||0,hidden,z:vc.z||0,fonts:[...fonts],usedMeasures:[...usedMeasures]});
+    }
+    pages.push({name:sec.displayName||'',width:sec.width||1280,height:sec.height||720,type:pgType,visuals,ordinal:sec.ordinal||0});
+  }
+  pages.sort((a,b)=>a.ordinal-b.ordinal);
+  return{pages,bookmarks};
+}
+function xFonts(o,s){if(!o||typeof o!=='object')return;if(Array.isArray(o)){o.forEach(i=>xFonts(i,s));return}if(o.fontFamily){const v=o.fontFamily;if(typeof v==='string'&&v)s.add(v);else if(typeof v==='object'){const x=((v.expr||{}).Literal||{}).Value||'';if(x)s.add(x.replace(/^'|'$/g,''))}}Object.values(o).forEach(v=>xFonts(v,s))}
+function xMeasures(o,s){if(!o||typeof o!=='object')return;if(Array.isArray(o)){o.forEach(i=>xMeasures(i,s));return}if(o.Measure&&typeof o.Measure==='object'){const n=o.Measure.Property||'';if(n)s.add(n)}Object.values(o).forEach(v=>xMeasures(v,s))}
+
+function calcScore(md){
+  const unused=md.measures.filter(m=>m._unused).length;
+  const bidir=md.relations.filter(r=>r.direction==='bothDirections').length;
+  const noFmt=md.measures.filter(m=>!m.formatString).length;
+  return Math.max(30,Math.min(100,100-unused*3-bidir*8-noFmt*2));
+}
+
+// ─────────────────────────────────────────
+// Helpers de renderização
+// ─────────────────────────────────────────
+function badge(txt,cls='b-gray'){return`<span class="badge ${cls}">${esc(txt)}</span>`}
+function alert_(msg,type='a-info'){return`<div class="alert ${type}">${msg}</div>`}
+function pageHeader(title,reportName){return`<div class="page-header"><div class="ph-title">${esc(title)}</div><div class="ph-report">${esc(reportName)}</div></div>`}
+function secTitle(title,sub=''){return`<div class="sec-title"><div class="sec-bar"></div>${esc(title)}</div>${sub?`<div class="sec-sub">${esc(sub)}</div>`:''}`}
+function tbl(headers,rows,rowCls){
+  const ths=headers.map(h=>`<th>${esc(h)}</th>`).join('');
+  const trs=rows.map((row,i)=>{
+    const cls=rowCls?rowCls(row,i):'';
+    const tds=row.map(c=>`<td>${typeof c==='string'?esc(c):c}</td>`).join('');
+    return`<tr${cls?` class="${cls}"`:''} >${tds}</tr>`;
+  }).join('');
+  return`<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+}
+function codeDax(expr,unused=false){return`<div class="code${unused?' unused-code':''}">${esc(expr)}</div>`}
+function scoreColor(s){return s>=75?'#34d399':s>=50?'#f59e0b':'#f87171'}
+function typeBadge(t){
+  const map={'Fato':'b-red','Dimensão':'b-blue','Calendário':'b-purple','Calendário (Sistema)':'b-purple','Tabela de Medidas':'b-green','Sistema':'b-gray','—':'b-gray'};
+  return badge(t,map[t]||'b-gray');
+}
+
+// ─────────────────────────────────────────
+// RENDER PRINCIPAL
+// ─────────────────────────────────────────
+function renderReport(data,md,ld,score){
+  const fname=data.filename.replace('.pbit','');
+  const gen=data.generated.toLocaleString('pt-BR');
+  const sc=scoreColor(score);
+  const pCount=ld.pages.length,tCount=md.tables.filter(t=>!t.hidden).length;
+  const mCount=md.measures.length,rCount=md.relations.length;
+  const vCount=ld.pages.reduce((a,p)=>a+p.visuals.length,0);
+  const bCount=ld.bookmarks.length;
+  const ccCount=md.columnCalc.length;
+  const unusedM=md.measures.filter(m=>m._unused);
+  const bidir=md.relations.filter(r=>r.direction==='bothDirections');
+  const conn=data.connections||{};
+  const remote=(conn.RemoteArtifacts||[]);
+  const reportId=Array.isArray(remote)&&remote[0]?remote[0].ReportId||'—':'—';
+  const datasetId=conn.DatasetId||'—';
+  const themeName=data.theme.name||data.themeFile||'—';
+  const compat=String(data.schema.compatibilityLevel||'—');
+
+  let html='';
+  let pg=1;
+
+  // ══ CAPA ══
+  const scoreW=Math.round(score)+'%';
+  html+=`<div class="page cover">
+  <div class="cover-accent"></div><div class="cover-accent2"></div>
+  <div class="cover-header">
+    <div class="cover-logo"><div class="cover-logo-icon">⊞</div><div class="cover-logo-text">Power BI DocReader</div></div>
+    <div class="cover-badge">Documentação Técnica</div>
+  </div>
+  <div class="cover-body">
+    <div class="cover-tag">Relatório Gerado Automaticamente</div>
+    <div class="cover-title">${esc(fname.length>28?fname.substring(0,28)+'…':fname)}<br><span>Documentação Técnica</span></div>
+    <div class="cover-sub">Análise completa do arquivo Power BI Template (.pbit)</div>
+    <div class="cover-meta">
+      <div class="cmi"><div class="cmi-label">Versão PBI Desktop</div><div class="cmi-value">${esc(data.version||'—')}</div></div>
+      <div class="cmi"><div class="cmi-label">Tema</div><div class="cmi-value">${esc(themeName)}</div></div>
+      <div class="cmi"><div class="cmi-label">Páginas</div><div class="cmi-value">${pCount} página${pCount!==1?'s':''}</div></div>
+      <div class="cmi"><div class="cmi-label">Compatibilidade</div><div class="cmi-value">${esc(compat)}</div></div>
+      <div class="cmi"><div class="cmi-label">Tabelas</div><div class="cmi-value">${tCount} visíveis</div></div>
+      <div class="cmi"><div class="cmi-label">Gerado em</div><div class="cmi-value">${gen}</div></div>
+    </div>
+    <div class="cover-score">
+      <div>
+        <div class="cover-score-num" style="color:${sc}">${score}</div>
+        <div class="cover-score-label" style="color:${sc};font-weight:700">Score Geral /100</div>
+        <div class="cover-score-label">${mCount} medidas · ${rCount} relações · ${vCount} visuais</div>
+      </div>
+      <div style="flex:1">
+        <div class="cover-score-bar"><div class="cover-score-fill" style="width:${scoreW};background:linear-gradient(90deg,${sc},#4f8ef7)"></div></div>
+        <div style="font-size:11px;color:#405070;margin-top:4px">${unusedM.length?`${unusedM.length} medida(s) não utilizada(s) · `:''}${bidir.length?`${bidir.length} relação(ões) bidirecional(is)`:'Sem relações bidirecionais'}</div>
+      </div>
+    </div>
+  </div>
+  <div class="cover-footer">
+    <div class="cover-footer-l">Gerado por Power BI DocReader v1.0 · Vanessa Costa · IA Claude (Anthropic)</div>
+    <div class="cover-footer-r">Confidencial</div>
+  </div>
+  <div class="page-num" style="color:#304060">${pg++}</div>
+</div>`;
+
+  // ══ SUMÁRIO ══
+  const sCols=`grid-template-columns:repeat(4,1fr)`;
+  html+=`<div class="page">${pageHeader('Sumário',fname)}
+  <div class="page-body">
+    ${secTitle('Sumário','Índice completo do relatório')}
+    <div class="stats" style="${sCols}">
+      <div class="stat s-blue"><div class="stat-num">${pCount}</div><div class="stat-lbl">Páginas</div></div>
+      <div class="stat s-purple"><div class="stat-num">${tCount}</div><div class="stat-lbl">Tabelas</div></div>
+      <div class="stat s-green"><div class="stat-num">${mCount}</div><div class="stat-lbl">Medidas DAX</div></div>
+      <div class="stat s-orange"><div class="stat-num">${rCount}</div><div class="stat-lbl">Relações</div></div>
+      <div class="stat s-pink"><div class="stat-num">${vCount}</div><div class="stat-lbl">Visuais</div></div>
+      <div class="stat s-blue"><div class="stat-num">${bCount}</div><div class="stat-lbl">Indicadores</div></div>
+      <div class="stat s-green"><div class="stat-num">${ccCount}</div><div class="stat-lbl">Cols. Calculadas</div></div>
+      <div class="stat s-red"><div class="stat-num">${unusedM.length}</div><div class="stat-lbl">Medidas Não Usadas</div></div>
+    </div>
+    <div class="sec-h2">Índice</div>
+    ${[['1','Metadados & Conexão'],['2','Páginas & Visuais — Visão Geral'],['3','Detalhamento por Página'],['4','Painel de Seleção — Camadas'],['5','Indicadores (Bookmarks)'],['6','Visuais Customizados'],['7','Tabelas & Modelo de Dados'],['8','Relações do Modelo'],['9','Medidas DAX'],['10','Colunas Calculadas'],['11','Fontes de Dados & Power Query (M)'],['12','Tipografia & Layout'],['13','Imagens & Recursos Estáticos'],['14','Tema & Paleta de Cores'],['15','Segurança — RLS'],['16','Observações & Checklist de Qualidade']].map(([n,t])=>`<div class="toc-item"><span class="toc-num">${n}.</span><span class="toc-title">${esc(t)}</span><span class="toc-dots"></span><span class="toc-page">—</span></div>`).join('')}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ PAG 3 — METADADOS ══
+  html+=`<div class="page">${pageHeader('1. Metadados & Conexão',fname)}
+  <div class="page-body">
+    ${secTitle('1. Metadados & Conexão')}
+    ${tbl(['Campo','Valor'],[
+      ['Arquivo',data.filename],['Tipo','Power BI Template (.pbit)'],
+      ['Versão Power BI Desktop',data.version||'—'],['Compatibilidade',compat],
+      ['Dataset ID',datasetId],['Report ID',reportId],
+      ['Tema',themeName],['Arquivos no ZIP',String(data.zipFiles.length)],
+      ['Gerado em',gen],['Gerado por','Vanessa Costa · Power BI DocReader v1.0'],
+    ])}
+    ${remote.length?alert_('ℹ Este relatório usa conexão remota (Cloud/Service). Os dados são carregados do Power BI Service.','a-info'):''}
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+      ${data.zipFiles.slice(0,20).map(f=>badge(f.split('/').pop().substring(0,30))).join('')}
+    </div>
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ PÁGINAS OVERVIEW ══
+  html+=`<div class="page">${pageHeader('2. Páginas & Visuais',fname)}
+  <div class="page-body">
+    ${secTitle('2. Páginas & Visuais — Visão Geral',`${pCount} páginas · ${vCount} visuais no total`)}
+    ${tbl(['Página','Dimensões','Visuais','Tipo'],ld.pages.map(p=>[p.name,`${p.width}×${p.height}`,String(p.visuals.length),p.type==='Tooltip'?badge('Tooltip','b-yellow'):p.type==='Drill-through'?badge('Drill-through','b-purple'):badge('Principal','b-blue')]),()=>'')}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ DETALHE POR PÁGINA ══
+  for(const p of ld.pages){
+    const typeCounts={};p.visuals.forEach(v=>{typeCounts[v.label]=(typeCounts[v.label]||0)+1});
+    const badges=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,c])=>badge(`${l} ×${c}`,'b-blue')).join(' ');
+    const fonts=[...new Set(p.visuals.flatMap(v=>v.fonts))];
+    const hiddenCount=p.visuals.filter(v=>v.hidden).length;
+    html+=`<div class="page">${pageHeader(`3. Páginas · ${esc(p.name)}`,fname)}
+    <div class="page-body">
+      ${secTitle(`3. ${esc(p.name)}`,`${p.type} · ${p.width}×${p.height}px · ${p.visuals.length} visuais${hiddenCount?` · ${hiddenCount} oculto(s)`:''}`)}
+      <div style="margin-bottom:10px">${badges}</div>
+      ${fonts.length?`<div style="font-size:10px;color:#999;font-weight:700;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase">Fontes: ${fonts.map(f=>badge(f,'b-navy')).join(' ')}</div>`:''}
+      ${tbl(['Tipo','Título','Campos Usados','Posição','Oculto'],
+        p.visuals.map(v=>[
+          badge(v.label,'b-blue'),
+          v.title||'—',
+          v.usedMeasures.slice(0,3).map(m=>badge(m,'b-green')).join(' ')||(v.usedMeasures.length?'…':'—'),
+          `(${Math.round(v.x)}, ${Math.round(v.y)})`,
+          v.hidden?'<strong style="color:#c5221f">⚠ Oculto</strong>':'Não'
+        ]),
+        (row,i)=>p.visuals[i]&&p.visuals[i].hidden?'tr-hidden':'')}
+    </div>
+    <div class="page-num">${pg++}</div></div>`;
+  }
+
+  // ══ PAINEL DE SELEÇÃO ══
+  for(const p of ld.pages){
+    const sorted=[...p.visuals].sort((a,b)=>b.z-a.z);
+    html+=`<div class="page">${pageHeader(`4. Painel de Seleção · ${esc(p.name)}`,fname)}
+    <div class="page-body">
+      ${secTitle(`4. ${esc(p.name)} — Camadas (Z-order)`,'Equivalente ao Painel de Seleção do Power BI Desktop')}
+      ${sorted.map((v,i)=>`<div class="layer-row">
+        <span class="layer-num">${i+1}</span>
+        ${badge(v.label,v.hidden?'b-gray':'b-blue')}
+        <span class="layer-name ${v.hidden?'layer-hidden-name':''}">${esc(v.title||v.label)}${v.hidden?' [OCULTO]':''}</span>
+        <span class="layer-info">z:${v.z} · ${Math.round(v.w)}×${Math.round(v.h)}${v.hidden?' · <span style="color:#f87171">oculto via bookmark</span>':''}</span>
+      </div>`).join('')}
+    </div>
+    <div class="page-num">${pg++}</div></div>`;
+  }
+
+  // ══ BOOKMARKS ══
+  html+=`<div class="page">${pageHeader('5. Indicadores · 6. Visuais Customizados',fname)}
+  <div class="page-body">
+    ${secTitle('5. Indicadores (Bookmarks)',`${bCount} indicador${bCount!==1?'es':''} configurado${bCount!==1?'s':''}`)}
+    ${!bCount?alert_('Nenhum indicador (bookmark) configurado neste relatório.','a-info'):
+      tbl(['Nome do Indicador','Grupo','Filtros','Visibilidade','Dados'],
+        ld.bookmarks.map(b=>[b.name,b.group||'—',b.captureFilters?'✓':'✗',b.captureVisibility?'✓':'✗',b.captureData?'✓':'✗']))}
+    <div class="sec-h2">Botões com Ação</div>
+    ${(()=>{const btns=ld.pages.flatMap(pg=>pg.visuals.filter(v=>v.type==='actionButton').map(v=>({page:pg.name,...v})));
+    return btns.length?tbl(['Página','Título','Posição','Tamanho'],btns.map(b=>[b.page,b.title||'—',`(${Math.round(b.x)}, ${Math.round(b.y)})`,`${Math.round(b.w)}×${Math.round(b.h)}`])):alert_('Nenhum botão de ação encontrado.','a-info')})()}
+    <div class="sec-h2">6. Visuais Customizados</div>
+    ${!data.customVisuals.length?alert_('Nenhum visual customizado encontrado neste relatório.','a-info'):
+      alert_('⚠ Visuais customizados precisam estar instalados no tenant do Power BI Service.','a-warn')+
+      tbl(['Nome do Visual','Versão','GUID'],data.customVisuals.map(cv=>[cv.displayName||cv.name||'—',cv.version||'—',cv.guid||'—']))}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ TABELAS ══
+  html+=`<div class="page">${pageHeader('7. Tabelas & Modelo de Dados',fname)}
+  <div class="page-body">
+    ${secTitle('7. Tabelas & Modelo de Dados',`${md.tables.length} tabelas · ${md.tables.filter(t=>t.hidden).length} oculta(s)`)}
+    ${tbl(['Tabela','Tipo','Colunas','Medidas','Hierarquias','Oculta'],
+      md.tables.map(t=>[t.name,typeBadge(t.type),String(t.colCount),String(t.measureCount),String(t.hierarchyCount),t.hidden?badge('Sim','b-red'):'—']))}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  for(const tbl_ of md.tables.filter(t=>!t.hidden&&t.columns.length)){
+    html+=`<div class="page">${pageHeader(`7. Tabela: ${esc(tbl_.name)}`,fname)}
+    <div class="page-body">
+      ${secTitle(`${esc(tbl_.name)}`,`${typeBadge(tbl_.type)} · ${tbl_.colCount} colunas · ${tbl_.measureCount} medidas`)}
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">
+        ${tbl_.columns.map(c=>badge(`${c.name} ${c.calculated==='DAX'?'[calc] ':''}${c.dataType?`(${c.dataType})`:''}`,c.calculated==='DAX'?'b-yellow':c.hidden?'b-gray':'b-gray')).join('')}
+      </div>
+      ${tbl_.hierarchies&&tbl_.hierarchies.length?`<div class="sec-h3">Hierarquias</div>${tbl_.hierarchies.map(h=>`<p style="font-size:12px;color:#444;margin:4px 0"><strong>${esc(h.name)}</strong>: ${(h.levels||[]).map(l=>esc(l.column||l.name||'')).join(' → ')}</p>`).join('')}`:''}
+    </div>
+    <div class="page-num">${pg++}</div></div>`;
+  }
+
+  // ══ RELAÇÕES ══
+  html+=`<div class="page">${pageHeader('8. Relações do Modelo',fname)}
+  <div class="page-body">
+    ${secTitle('8. Relações do Modelo',`${rCount} relação${rCount!==1?'ões':''} · ${bidir.length} bidirecional${bidir.length!==1?'is':''}`)}
+    ${bidir.length?alert_(`⚠ <strong>${bidir.length} relação(ões) bidirecional(is)</strong> identificada(s) — podem causar ambiguidade e degradar desempenho.`,'a-warn'):''}
+    ${!rCount?alert_('Nenhuma relação definida no modelo.','a-info'):
+      md.relations.map(r=>`<div class="rel-row${r.direction==='bothDirections'?' bidir':''}${!r.active?' rel-inactive':''}">
+        <span class="rel-from">${esc(r.fromTable)}</span>
+        <span class="rel-col">[${esc(r.fromCol)}]</span>
+        <span class="rel-arrow">${r.direction==='bothDirections'?'↔':'→'}</span>
+        <span class="rel-to">${esc(r.toTable)}</span>
+        <span class="rel-col">[${esc(r.toCol)}]</span>
+        <span style="margin-left:auto;display:flex;gap:4px">
+          ${r.direction==='bothDirections'?badge('Bidirecional ⚠','b-yellow'):badge('1 direção','b-green')}
+          ${r.active?badge('Ativa','b-green'):badge('Inativa','b-gray')}
+        </span>
+      </div>`).join('')}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ MEDIDAS DAX ══
+  const tableOrder=[...new Set(md.measures.map(m=>m.table))];
+  for(const tname of tableOrder){
+    const tMeasures=md.measures.filter(m=>m.table===tname);
+    html+=`<div class="page">${pageHeader(`9. Medidas DAX · ${esc(tname)}`,fname)}
+    <div class="page-body">
+      ${secTitle('9. Medidas DAX',`${tMeasures.length} medida${tMeasures.length!==1?'s':''} · Tabela: ${esc(tname)}`)}
+      ${unusedM.length?alert_(`⚠ Medidas não utilizadas nesta análise: <strong>${unusedM.map(m=>m.name).join(', ')}</strong>`,'a-warn'):''}
+      ${tMeasures.map(m=>`<div class="measure-card${m._unused?' unused':''}">
+        <div class="m-table">[${esc(m.table)}]${m.displayFolder?` · 📁 ${esc(m.displayFolder)}`:''}</div>
+        <div class="m-name">${esc(m.name)} ${m._unused?badge('Não utilizada ⚠','b-red'):badge('Em uso','b-green')} ${m.formatString?badge(m.formatString,'b-gray'):''}</div>
+        ${m.expression?codeDax(m.expression,m._unused):''}
+        ${m.description?`<div style="font-size:11px;color:#888;margin-top:3px">📝 ${esc(m.description)}</div>`:''}
+        ${m._unused?`<div style="font-size:11px;color:#f87171;margin-top:3px">⚠ Esta medida não está sendo utilizada em nenhum visual. Considere remover ou arquivar.</div>`:''}
+      </div>`).join('')}
+    </div>
+    <div class="page-num">${pg++}</div></div>`;
+  }
+
+  // ══ COLUNAS CALCULADAS ══
+  html+=`<div class="page">${pageHeader('10. Colunas Calculadas',fname)}
+  <div class="page-body">
+    ${secTitle('10. Colunas Calculadas',`${md.columnCalc.length} coluna${md.columnCalc.length!==1?'s':''} calculada${md.columnCalc.length!==1?'s':''}`)}
+    ${!md.columnCalc.length?alert_('Nenhuma coluna calculada encontrada no modelo.','a-info'):
+      (()=>{let h='',cur=null;for(const cc of md.columnCalc){if(cc.table!==cur){cur=cc.table;h+=`<div class="sec-h3">${esc(cur)}</div>`}h+=`<p style="font-weight:800;font-size:12px;color:#1a1a2e;margin:8px 0 2px">${esc(cc.column)} ${badge(cc.dataType,'b-gray')}</p>${codeDax(cc.expression)}`}return h})()}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ POWER QUERY ══
+  html+=`<div class="page">${pageHeader('11. Power Query (M)',fname)}
+  <div class="page-body">
+    ${secTitle('11. Fontes de Dados & Power Query (M)',`${md.partitionsM.length} partição${md.partitionsM.length!==1?'ões':''} com código M`)}
+    ${!md.partitionsM.length?alert_('Nenhuma expressão M (Power Query) encontrada no modelo.','a-info'):
+      md.partitionsM.map(p=>`<div class="sec-h3">${esc(p.table)} / ${esc(p.partition)}</div>
+      <div style="margin-bottom:6px">${badge('Import','b-blue')} ${badge('m','b-green')}</div>
+      ${codeDax(p.expression)}`).join('')}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ TIPOGRAFIA ══
+  const fontPages={};
+  ld.pages.forEach(p=>p.visuals.forEach(v=>v.fonts.forEach(f=>{if(!fontPages[f])fontPages[f]=new Set();fontPages[f].add(p.name)})));
+  const fontEntries=Object.entries(fontPages);
+  html+=`<div class="page">${pageHeader('12. Tipografia · 13. Imagens · 14. Tema',fname)}
+  <div class="page-body">
+    ${secTitle('12. Tipografia & Layout')}
+    ${fontEntries.length?`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px">
+      ${fontEntries.slice(0,6).map(([f,pages])=>`<div style="border:1px solid #e8e8f0;border-radius:9px;padding:12px 15px">
+        <div style="font-size:17px;font-weight:700;margin-bottom:3px;font-family:'${esc(f)}',sans-serif">${esc(f)}</div>
+        <div style="font-size:20px;color:#bbb;margin-bottom:6px;font-family:'${esc(f)}',sans-serif">Aa Bb Cc 0123</div>
+        <div style="font-size:11px;color:#999">Usado em: ${[...pages].slice(0,3).map(p=>badge(p,'b-blue')).join(' ')}${pages.size>3?` +${pages.size-3}`:''}</div>
+      </div>`).join('')}
+    </div>
+    ${tbl(['Página','Largura','Altura','Razão'],ld.pages.map(p=>[p.name,`${p.width}px`,`${p.height}px`,`${(p.width/p.height).toFixed(2)}:1`]))}`:alert_('Não foi possível extrair tipografia.','a-info')}
+
+    <div class="sec-h2">13. Imagens & Recursos Estáticos</div>
+    ${!data.staticResources.length?alert_('Nenhum recurso estático encontrado.','a-info'):(()=>{
+      const cl=n=>{const u=n.toUpperCase();if(u.startsWith('TELA_')||u.includes('BACKGROUND'))return['Plano de fundo','b-purple'];if(u.startsWith('IMAGEM')||u.startsWith('IMAGE'))return['Imagem Decorativa','b-blue'];if(u.startsWith('SCREENSHOT_'))return['Botão / Ícone','b-orange']||['Botão / Ícone','b-gray'];return['Recurso','b-gray']};
+      return tbl(['Arquivo','Classificação'],data.staticResources.map(r=>{const[l,c]=cl(r);return[r,badge(l,c)]}))
+    })()}
+
+    <div class="sec-h2">14. Tema & Paleta de Cores</div>
+    ${!Object.keys(data.theme).length?alert_('Usando tema padrão do Power BI.','a-info'):(()=>{
+      const colors=data.theme.dataColors||data.theme.palette||[];
+      return `${tbl(['Campo','Valor'],[['Nome',data.theme.name||'—'],['Versão',String(data.theme.version||'—')],['Arquivo',data.themeFile||'—']])}
+      ${colors.length?`<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 0">${colors.slice(0,20).filter(c=>typeof c==='string'&&c.startsWith('#')).map(c=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px"><div style="width:22px;height:22px;border-radius:4px;background:${esc(c)};border:1px solid rgba(0,0,0,.1)"></div>${esc(c)}</div>`).join('')}</div>`:''}`})()}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ RLS ══
+  html+=`<div class="page">${pageHeader('15. Segurança — RLS',fname)}
+  <div class="page-body">
+    ${secTitle('15. Segurança — RLS',`${md.roles.length} função${md.roles.length!==1?'ões':''} RLS configurada${md.roles.length!==1?'s':''}`)}
+    ${!md.roles.length?alert_('✓ Nenhuma função RLS (Row-Level Security) configurada neste modelo.','a-ok'):
+      md.roles.map(role=>`<div class="sec-h3">🔒 Role: ${esc(role.name)}</div>
+      <p style="font-size:12px;margin-bottom:8px">Permissão: ${badge(role.modelPermission||'—','b-navy')}</p>
+      ${(role.tablePermissions||[]).length?tbl(['Tabela','Filtro DAX'],(role.tablePermissions||[]).map(tp=>[tp.name||'—',tp.filterExpression||'—'])):alert_('Nenhum filtro de tabela definido.','a-info')}`).join('')}
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  // ══ QUALIDADE ══
+  const hasMT=md.tables.some(t=>t.type==='Tabela de Medidas');
+  const hasCal=md.tables.some(t=>t.type.includes('Calendário'));
+  const hasRel=md.relations.length>0;
+  const noBidir=bidir.length===0;
+  const allUsed=unusedM.length===0;
+  const allFmt=!md.measures.some(m=>!m.formatString);
+  const hasRLS=md.roles.length>0;
+  const hasCV=data.customVisuals.length>0;
+  const hasTooltips=ld.pages.some(p=>p.type==='Tooltip');
+  const hasImages=data.staticResources.length>0;
+  const hasVisTables=md.tables.some(t=>!t.hidden);
+  const hasDrill=ld.pages.some(p=>p.type==='Drill-through');
+  const hiddenVis=ld.pages.flatMap(p=>p.visuals).filter(v=>v.hidden).length;
+
+  html+=`<div class="page">${pageHeader('16. Observações & Checklist de Qualidade',fname)}
+  <div class="page-body">
+    ${secTitle('16. Observações & Qualidade','Análise automatizada de boas práticas')}
+    <div style="display:flex;gap:20px;margin-bottom:22px">
+      <div style="border:1px solid #e8e8f0;border-radius:13px;padding:20px 26px;text-align:center;flex-shrink:0">
+        <div class="score-big" style="color:${sc}">${score}</div>
+        <div style="font-size:12px;color:#999;margin-top:4px">Score /100</div>
+        <div class="score-bar" style="width:100px;margin:8px auto"><div class="score-fill" style="width:${score}%;background:linear-gradient(90deg,${sc},#4f8ef7)"></div></div>
+        ${badge(score>=75?'Bom':score>=50?'Regular':'Crítico',score>=75?'b-green':score>=50?'b-yellow':'b-red')}
+      </div>
+      <div style="flex:1">
+        <div class="sec-h3" style="margin-top:0">Problemas Identificados</div>
+        ${unusedM.length?alert_(`<strong>Medidas não utilizadas (${unusedM.length})</strong> — ${badge('Média','b-yellow')}<br/>${unusedM.map(m=>m.name).join(', ')} não aparecem em nenhum visual. Recomenda-se remover ou arquivar.`,'a-warn'):''}
+        ${bidir.length?alert_(`<strong>Relações bidirecionais (${bidir.length})</strong> — ${badge('Alta','b-red')}<br/>Podem causar resultados inesperados e degradação de desempenho em modelos complexos.`,'a-warn'):''}
+        ${hiddenVis?alert_(`<strong>Visuais ocultos (${hiddenVis})</strong> — ${badge('Baixa','b-gray')}<br/>Comportamento esperado para máscaras de bookmark — documentado na seção 4.`,'a-info'):''}
+        ${!allFmt?alert_(`<strong>Medidas sem formatString</strong> — ${badge('Baixa','b-gray')}<br/>${md.measures.filter(m=>!m.formatString).map(m=>m.name).slice(0,5).join(', ')} não têm formato explicitamente definido.`,'a-info'):''}
+        ${unusedM.length===0&&bidir.length===0?alert_('✓ Estrutura geral do relatório está sólida. Nenhum problema crítico encontrado.','a-ok'):''}
+      </div>
+    </div>
+    <div class="sec-h2">Checklist de Boas Práticas</div>
+    ${[[hasVisTables,'Tabelas visíveis no modelo',hasVisTables?'✓ Confirmado':'✗ Nenhuma tabela visível'],
+       [hasMT,'Tabela de medidas isolada',hasMT?'✓ Presente':'— Não encontrada'],
+       [hasCal,'Tabela calendário presente',hasCal?'✓ Presente':'— Não encontrada'],
+       [hasRel,'Relacionamentos definidos',hasRel?`✓ ${rCount} relações`:'— Nenhuma relação'],
+       [noBidir,'Sem relações bidirecionais',noBidir?'✓ Confirmado':`✗ ${bidir.length} encontrada(s)`],
+       [allUsed,'Todas as medidas utilizadas',allUsed?'✓ Confirmado':`✗ ${unusedM.length} não usada(s)`],
+       [allFmt,'Medidas com formatString',allFmt?'✓ Todas formatadas':`⚠ ${md.measures.filter(m=>!m.formatString).length} sem formato`],
+       [hasRLS,'RLS configurado',hasRLS?`✓ ${md.roles.length} role(s)`:'— Não configurado'],
+       [hasCV,'Visuais customizados identificados',hasCV?`✓ ${data.customVisuals.length} visual(is)`:'— Nenhum'],
+       [hasTooltips,'Tooltips personalizadas',hasTooltips?'✓ Presente':'— Nenhuma'],
+       [hasDrill,'Drill-through configurado',hasDrill?'✓ Presente':'— Nenhum'],
+       [hasImages,'Imagens de layout embutidas',hasImages?`✓ ${data.staticResources.length} arquivo(s)`:'— Nenhum'],
+    ].map(([ok,label,detail])=>`<div class="check-row">
+      <span>${esc(label)}</span>
+      <span class="${ok?'ch-ok':detail.startsWith('—')?'ch-neutral':'ch-fail'}">${esc(detail)}</span>
+    </div>`).join('')}
+    <div class="alert a-ok" style="margin-top:14px">✓ Análise concluída · Power BI DocReader v1.0 · Desenvolvido por Vanessa Costa com IA Claude (Anthropic)</div>
+  </div>
+  <div class="page-num">${pg++}</div></div>`;
+
+  document.getElementById('reportWrap').innerHTML=html;
+}
+</script>
+</body>
+</html>
