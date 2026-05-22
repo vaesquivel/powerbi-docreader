@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Power BI DocReader v1.0</title>
+<title>Power BI DocReader v1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
@@ -19,7 +19,7 @@ body{font-family:'DM Sans',sans-serif;background:#e8e8e8;color:#1a1a2e}
 .logo-badge{background:#4f8ef714;border:1px solid #4f8ef733;color:#4f8ef7;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
 .hero-title{font-size:44px;font-weight:800;text-align:center;line-height:1.15;margin-bottom:14px;color:#1e293b;letter-spacing:-1px}
 .hero-title .hl{color:#4f8ef7}
-.hero-title .hl2{color:#7c3aed}
+.hero-title .hl2{color:#1e40af}
 .hero-sub{color:#64748b;text-align:center;max-width:500px;margin-bottom:36px;font-size:15px;line-height:1.65}
 .drop-zone{width:100%;max-width:560px;border:2px dashed #cbd5e1;border-radius:16px;background:#ffffff;padding:56px 40px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:24px;box-shadow:0 4px 24px rgba(79,142,247,.08)}
 .drop-zone:hover,.drop-zone.dragover{border-color:#4f8ef7;background:#f0f6ff;box-shadow:0 4px 32px rgba(79,142,247,.16)}
@@ -259,8 +259,8 @@ tbody tr:hover td{background:#f0f4ff}
     <span class="logo-text">Power BI <span>DocReader</span></span>
     <span class="logo-badge">Leitura real do .pbit</span>
   </div>
-  <h1 class="hero-title">Documentação técnica <span class="hl">real</span> do seu<br><span class="hl2">Power BI</span></h1>
-  <p class="hero-sub">Faça upload do <strong style="color:#e2e8f0">.pbit</strong> — lemos o arquivo internamente (ZIP + JSON). Nenhum dado sai do navegador.</p>
+  <h1 class="hero-title">Documentação técnica do seu<br><span class="hl2">Power BI</span></h1>
+  <p class="hero-sub">Faça upload do <strong style="color:#1e40af;font-weight:800">.pbit</strong> — lemos o arquivo internamente (ZIP + JSON). Nenhum dado sai do navegador.</p>
   <div class="drop-zone" id="dropZone">
     <div class="dz-icon">📂</div>
     <div class="dz-text">Arraste seu <span>.pbit</span> aqui</div>
@@ -316,6 +316,9 @@ tbody tr:hover td{background:#f0f4ff}
       </div>
       <div class="howto-note" style="margin-top:18px">
         💡 <strong>Não tem o relatório no Desktop?</strong> Acesse <strong>app.powerbi.com</strong>, abra o relatório, clique em <strong>Arquivo → Baixar este arquivo</strong> para salvar como <strong>.pbix</strong> — depois abra no Desktop e siga os passos acima.
+      </div>
+      <div class="howto-note" style="margin-top:10px;border-left-color:#d97706;border-color:#fde68a;background:#fffbeb">
+        ⚠️ <strong style="color:#d97706">Por que não funciona com .pbix?</strong> O arquivo <strong>.pbix</strong> contém os dados reais carregados e o modelo compilado em formato binário proprietário — não é possível extrair o esquema JSON diretamente pelo navegador. Já o <strong>.pbit</strong> é um <em>template sem dados</em>, salvo no formato ZIP + JSON aberto, que expõe toda a estrutura: tabelas, colunas, medidas DAX, relações e layout dos visuais. Por isso apenas o <strong>.pbit</strong> é compatível com este leitor.
       </div>
     </div>
   </div>
