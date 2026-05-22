@@ -58,6 +58,28 @@ body{font-family:'DM Sans',sans-serif;background:#e8e8e8;color:#1a1a2e}
 .howto-note strong{color:#7ab4ff}
 @media(max-width:520px){.howto-cols{flex-direction:column}.howto-divider{flex-direction:row;padding:10px 0;align-self:auto}.howto-divider::before,.howto-divider::after{height:1px;width:100%;flex:1}.howto-col{padding:0}}
 
+/* ── CHANGELOG ── */
+.cl-list{padding:6px 0}
+.cl-item{display:flex;gap:16px;padding:14px 20px;border-bottom:1px solid #0d1117;transition:background .15s}
+.cl-item:last-child{border-bottom:none}
+.cl-item:hover{background:#0d1117}
+.cl-current{background:#0a1628}
+.cl-current:hover{background:#0d1e38}
+.cl-ver{background:linear-gradient(135deg,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:12px;font-weight:800;min-width:32px;padding-top:2px;letter-spacing:.3px}
+.cl-current .cl-ver{font-size:13px}
+.cl-content{flex:1}
+.cl-title{font-size:13px;font-weight:700;color:#cbd5e1;margin-bottom:6px}
+.cl-tags{display:flex;gap:6px;margin-bottom:8px}
+.cl-tag{padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.cl-tag.feat{background:#34d39922;border:1px solid #34d39944;color:#34d399}
+.cl-tag.fix{background:#f59e0b22;border:1px solid #f59e0b44;color:#f59e0b}
+.cl-tag.launch{background:#a78bfa22;border:1px solid #a78bfa44;color:#a78bfa}
+.cl-notes{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px}
+.cl-notes li{font-size:11.5px;color:#64748b;padding-left:14px;position:relative;line-height:1.55}
+.cl-notes li::before{content:'·';position:absolute;left:4px;color:#334155}
+.cl-notes li strong{color:#94a3b8}
+.cl-notes li code{background:#0d1117;border:1px solid #1e3a5f;border-radius:3px;padding:1px 5px;font-size:10px;color:#7ab4ff;font-family:'JetBrains Mono',monospace}
+
 /* ── LOADING ── */
 #loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0f1629;gap:18px}
 .spinner{width:44px;height:44px;border:3px solid #1e3a5f;border-top-color:#4f8ef7;border-radius:50%;animation:spin .75s linear infinite}
@@ -204,6 +226,18 @@ tbody tr:hover td{background:#f0f4ff}
 .toc-dots{flex:1;border-bottom:1px dotted #ddd;margin:0 8px;height:1px;align-self:center}
 .toc-page{color:#aaa;font-size:11px}
 
+/* ── STEP 2 ── */
+.pg-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #0d1117;transition:background .15s}
+.pg-row:last-child{border-bottom:none}
+.pg-row:hover{background:#172040}
+.pg-idx{background:#1e3a5f;color:#4f8ef7;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:800;flex-shrink:0}
+.pg-name{flex:1;font-size:13px;color:#cbd5e1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-type{font-size:10px;color:#475569;flex-shrink:0}
+.pg-upload-label{background:#0d1117;border:1px solid #1e3a5f;border-radius:8px;padding:6px 14px;color:#4f8ef7;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.pg-upload-label:hover{border-color:#4f8ef7;background:#131c2e}
+.pg-upload-label.done{border-color:#34d399;color:#34d399;background:#0d2218}
+.pg-thumb{width:52px;height:34px;object-fit:cover;border-radius:5px;border:1px solid #34d399;flex-shrink:0;display:none}
+
 /* ── PRINT ── */
 @media print{
   body{background:#fff;padding-top:0}
@@ -284,13 +318,144 @@ tbody tr:hover td{background:#f0f4ff}
     </div>
   </div>
 
-  <p class="credit">Desenvolvido por Vanessa Costa · Power BI DocReader v1.0 · Powered by IA Claude (Anthropic)</p>
+  <!-- ── CHANGELOG ── -->
+  <div class="howto-wrap" style="margin-top:12px">
+    <button class="howto-toggle" onclick="toggleChangelog()" id="changelogBtn">
+      <span>📋</span> Histórico de versões
+      <span style="margin-left:6px;background:#34d39922;border:1px solid #34d39944;color:#34d399;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">v1.6 — atual</span>
+      <span class="howto-arrow" id="changelogArrow">▾</span>
+    </button>
+    <div class="howto-body" id="changelogBody" style="padding:0">
+      <div class="cl-list">
+
+        <div class="cl-item cl-current">
+          <div class="cl-ver">v1.6</div>
+          <div class="cl-content">
+            <div class="cl-title">Análise de dependências DAX</div>
+            <div class="cl-tags"><span class="cl-tag fix">fix crítico</span></div>
+            <ul class="cl-notes">
+              <li>Medidas de <strong>uso indireto</strong> (referenciadas por outras medidas) não são mais marcadas como "não utilizadas"</li>
+              <li>Rastreamento completo do grafo de dependências entre medidas DAX</li>
+              <li>3 badges de status: <strong>Uso direto ✓</strong> · <strong>Uso indireto ↗</strong> · <strong>Não utilizada ⚠</strong></li>
+              <li>Exibe quais medidas referenciam cada medida indireta</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.5</div>
+          <div class="cl-content">
+            <div class="cl-title">Upload de capturas de tela por página</div>
+            <div class="cl-tags"><span class="cl-tag feat">novo</span></div>
+            <ul class="cl-notes">
+              <li>Nova tela intermediária para adicionar prints antes de gerar o relatório</li>
+              <li>Cada página detectada recebe seu próprio botão de upload</li>
+              <li>Prints aparecem no relatório acima da análise de cada página</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.4</div>
+          <div class="cl-content">
+            <div class="cl-title">Prévia visual + guia de uso</div>
+            <div class="cl-tags"><span class="cl-tag feat">novo</span></div>
+            <ul class="cl-notes">
+              <li>Extração automática de screenshots e imagens embutidas no .pbit</li>
+              <li>Nova seção "Prévia Visual das Páginas" com grade 2×2 por folha A4</li>
+              <li>Passo a passo "Como obter o .pbit" na tela inicial (expansível)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.3</div>
+          <div class="cl-content">
+            <div class="cl-title">Correções de qualidade e precisão</div>
+            <div class="cl-tags"><span class="cl-tag fix">fix</span></div>
+            <ul class="cl-notes">
+              <li>Badges em subtítulos de seções renderizando corretamente</li>
+              <li>Sumário com números de página reais (calculados dinamicamente)</li>
+              <li>Nível de compatibilidade do Power BI agora exibido corretamente</li>
+              <li>Modo Power Query exibe Import / DirectQuery / DualMode real do arquivo</li>
+              <li>CSS <code>b-orange</code> adicionado para badges de recursos estáticos</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.2</div>
+          <div class="cl-content">
+            <div class="cl-title">Correções de renderização HTML</div>
+            <div class="cl-tags"><span class="cl-tag fix">fix</span></div>
+            <ul class="cl-notes">
+              <li>Badges coloridos aparecendo corretamente nas tabelas (antes exibiam código HTML)</li>
+              <li>Diagnóstico detalhado quando o arquivo não gera dados</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.1</div>
+          <div class="cl-content">
+            <div class="cl-title">Correção crítica de leitura do arquivo</div>
+            <div class="cl-tags"><span class="cl-tag fix">fix crítico</span></div>
+            <ul class="cl-notes">
+              <li>Fix: encoding <code>utf-16le</code> (Edge/Chrome rejeitavam <code>utf-16-le</code>)</li>
+              <li>Fix: função de geração do relatório corrigida (causava tela em branco)</li>
+              <li>Busca de arquivos no ZIP sem diferenciação de maiúsculas/minúsculas</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
+          <div class="cl-ver">v1.0</div>
+          <div class="cl-content">
+            <div class="cl-title">Lançamento inicial</div>
+            <div class="cl-tags"><span class="cl-tag launch">lançamento</span></div>
+            <ul class="cl-notes">
+              <li>Leitura completa de arquivos .pbit (ZIP + JSON UTF-16LE)</li>
+              <li>16 seções de documentação técnica em páginas A4</li>
+              <li>Score de qualidade 0–100 com checklist de boas práticas</li>
+              <li>Medidas DAX, relações, Power Query, RLS, visuais customizados</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <p class="credit" style="margin-top:20px">Desenvolvido por Vanessa Costa · Power BI DocReader v1.6 · Powered by IA Claude (Anthropic)</p>
 </div>
 
 <!-- ── LOADING ── -->
 <div id="loading">
   <div class="spinner"></div>
   <div id="loadingText">Lendo arquivo...</div>
+</div>
+
+<!-- ── STEP 2: UPLOAD DE PRINTS ── -->
+<div id="step2" style="display:none;flex-direction:column;align-items:center;min-height:100vh;background:#0f1629;padding:40px 20px;overflow-y:auto">
+  <div style="max-width:620px;width:100%">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:42px;margin-bottom:10px">📸</div>
+      <h2 style="color:#fff;font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px">Adicionar capturas de tela</h2>
+      <p style="color:#64748b;font-size:14px;line-height:1.6">Opcional — faça print de cada página no Power BI Desktop<br>e adicione aqui para incluir no relatório</p>
+    </div>
+    <div id="step2Pages" style="background:#131c2e;border:1px solid #1e3a5f;border-radius:14px;padding:6px 0;margin-bottom:20px"></div>
+    <div style="background:#131c2e;border:1px solid #1e3a5f;border-radius:12px;padding:14px 18px;margin-bottom:24px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:18px">💡</span>
+      <div style="font-size:12px;color:#64748b;line-height:1.65">
+        <strong style="color:#7ab4ff">Como tirar o print no Power BI Desktop:</strong><br>
+        Abra a página desejada → use <kbd style="background:#0d1117;border:1px solid #334155;border-radius:4px;padding:1px 6px;font-size:11px;color:#94a3b8">Win + Shift + S</kbd> para capturar a área → salve como PNG → clique em "Adicionar print" ao lado da página.
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button onclick="gerarSemPrints()" style="flex:1;background:transparent;border:1px solid #334155;color:#64748b;padding:14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;transition:all .2s" onmouseover="this.style.borderColor='#64748b';this.style.color='#94a3b8'" onmouseout="this.style.borderColor='#334155';this.style.color='#64748b'">Pular — gerar sem prints</button>
+      <button onclick="gerarComPrints()" style="flex:2;background:linear-gradient(135deg,#4f8ef7,#a78bfa);border:none;color:#fff;padding:14px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;font-family:'DM Sans',sans-serif;box-shadow:0 4px 20px #4f8ef740;transition:all .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">⚡ Gerar Relatório</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── TOOLBAR ── -->
@@ -334,6 +499,17 @@ dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'))
 dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');processFile(e.dataTransfer.files[0])});
 fileInput.addEventListener('change',e=>processFile(e.target.files[0]));
 
+function toggleChangelog(){
+  const body=document.getElementById('changelogBody');
+  const arrow=document.getElementById('changelogArrow');
+  const btn=document.getElementById('changelogBtn');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  arrow.style.transform=open?'':'rotate(180deg)';
+  btn.style.borderRadius=open?'12px':'12px 12px 0 0';
+  btn.style.borderColor=open?'#1e3a5f':'#4f8ef7';
+}
+
 function toggleHowTo(){
   const body=document.getElementById('howtoBody');
   const arrow=document.getElementById('howtoArrow');
@@ -349,14 +525,80 @@ function resetApp(){
   document.getElementById('landing').style.display='flex';
   document.getElementById('toolbar').style.display='none';
   document.getElementById('reportWrap').style.display='none';
+  document.getElementById('step2').style.display='none';
   fileInput.value='';
+  _customPrints={};
 }
 function setLoading(msg){
   document.getElementById('landing').style.display='none';
   document.getElementById('loading').style.display='flex';
   document.getElementById('reportWrap').style.display='none';
   document.getElementById('toolbar').style.display='none';
+  document.getElementById('step2').style.display='none';
   document.getElementById('loadingText').textContent=msg;
+}
+
+// ── STEP 2: UPLOAD DE PRINTS POR PÁGINA ──
+let _pendingReport=null;
+let _customPrints={};
+
+function showStep2(data,md,ld,score){
+  _pendingReport={data,md,ld,score};
+  _customPrints={};
+  const rows=ld.pages.map((p,i)=>`
+    <div class="pg-row">
+      <span class="pg-idx">${i+1}</span>
+      <span class="pg-name" title="${esc(p.name)}">${esc(p.name||'Página '+(i+1))}</span>
+      <span class="pg-type">${esc(p.type)}</span>
+      <img id="pthumb${i}" class="pg-thumb">
+      <label class="pg-upload-label" id="plabel${i}">
+        📷 Adicionar print
+        <input type="file" accept="image/png,image/jpeg,image/jpg" style="display:none" onchange="onPrintUpload(this,${i})">
+      </label>
+    </div>`).join('');
+  document.getElementById('step2Pages').innerHTML=rows;
+  document.getElementById('loading').style.display='none';
+  document.getElementById('step2').style.display='flex';
+}
+
+function onPrintUpload(input,idx){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _customPrints[idx]=e.target.result;
+    const thumb=document.getElementById('pthumb'+idx);
+    thumb.src=e.target.result;thumb.style.display='block';
+    const lbl=document.getElementById('plabel'+idx);
+    lbl.className='pg-upload-label done';
+    lbl.childNodes[0].textContent='✅ Print adicionado';
+  };
+  reader.readAsDataURL(file);
+}
+
+function gerarSemPrints(){_customPrints={};_finalizarRelatorio();}
+function gerarComPrints(){_finalizarRelatorio();}
+
+function _finalizarRelatorio(){
+  if(!_pendingReport)return;
+  const{data,md,ld,score}=_pendingReport;
+  data.customPrints=_customPrints;
+  document.getElementById('step2').style.display='none';
+  setLoading('Gerando documentação...');
+  setTimeout(()=>{
+    try{
+      const html=buildReport(data,md,ld,score);
+      document.getElementById('tbFilename').textContent='— '+data.filename;
+      document.getElementById('loading').style.display='none';
+      document.getElementById('toolbar').style.display='flex';
+      document.getElementById('reportWrap').style.display='block';
+      document.getElementById('reportWrap').innerHTML=html;
+    }catch(e){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('landing').style.display='flex';
+      showError('Erro ao gerar relatório: '+e.message);
+      console.error(e);
+    }
+  },80);
 }
 
 // ─────────────────────────────────────────
@@ -545,26 +787,58 @@ async function processFile(file){
     const data={filename:file.name,schema,layout,connections,version,theme,themeFile,customVisuals:cvs,staticResources:staticRes,zipFiles:fileNames,generated:new Date(),pageImages};
     const md=processSchema(schema);
     const ld=processLayout(layout);
-    const usedNames=new Set();
-    ld.pages.forEach(pg=>pg.visuals.forEach(v=>v.usedMeasures.forEach(m=>usedNames.add(m))));
-    md.measures.forEach(m=>{m._used=usedNames.size===0||usedNames.has(m.name);m._unused=usedNames.size>0&&!usedNames.has(m.name)});
+
+    // ── Análise de uso de medidas com rastreamento de dependências DAX ──
+    // 1. Medidas usadas diretamente em visuais
+    const directUsed=new Set();
+    ld.pages.forEach(pg=>pg.visuals.forEach(v=>v.usedMeasures.forEach(m=>directUsed.add(m))));
+
+    // 2. Mapa de dependências: para cada medida, quais outras medidas ela referencia
+    const measureNames=new Set(md.measures.map(m=>m.name));
+    const deps={}; // { nomeMedida: Set<nomeMedidasReferenciadas> }
+    for(const m of md.measures){
+      const refs=new Set();
+      // Padrão DAX: [NomeDaMedida] ou Tabela[NomeDaMedida]
+      const expr=m.expression||'';
+      for(const match of expr.matchAll(/\[([^\]]+)\]/g)){
+        const refName=match[1].trim();
+        if(measureNames.has(refName)&&refName!==m.name) refs.add(refName);
+      }
+      deps[m.name]=refs;
+    }
+
+    // 3. Propaga uso: se A é usada e A referencia B → B também é usada (indiretamente)
+    const allUsed=new Set(directUsed);
+    let changed=true;
+    while(changed){
+      changed=false;
+      for(const[mName,mDeps] of Object.entries(deps)){
+        if(allUsed.has(mName)){
+          for(const dep of mDeps){
+            if(!allUsed.has(dep)){allUsed.add(dep);changed=true;}
+          }
+        }
+      }
+    }
+
+    // 4. Marca cada medida com seu status de uso
+    md.measures.forEach(m=>{
+      const direct=directUsed.has(m.name);
+      const indirect=!direct&&allUsed.has(m.name);
+      m._used   = directUsed.size===0 || direct || indirect;
+      m._unused = directUsed.size>0   && !direct && !indirect;
+      m._direct = direct;
+      m._indirect = indirect;
+      // Quais medidas de nível superior usam esta (para exibição)
+      m._usedBy = directUsed.size>0&&indirect
+        ? md.measures.filter(x=>allUsed.has(x.name)&&(deps[x.name]||new Set()).has(m.name)).map(x=>x.name)
+        : [];
+    });
     const score=calcScore(md);
 
-    setLoading('Gerando documentação...');await sleep(30);
-
-    try{
-      const html=buildReport(data,md,ld,score);
-      document.getElementById('tbFilename').textContent='— '+file.name;
-      document.getElementById('loading').style.display='none';
-      document.getElementById('toolbar').style.display='flex';
-      document.getElementById('reportWrap').style.display='block';
-      document.getElementById('reportWrap').innerHTML=html;
-    }catch(renderErr){
-      document.getElementById('loading').style.display='none';
-      document.getElementById('landing').style.display='flex';
-      showError('Erro ao gerar o relatório: '+renderErr.message);
-      console.error('renderReport error:',renderErr);
-    }
+    setLoading('Preparando etapa de capturas...');await sleep(30);
+    // Vai para step2 (upload de prints por página) antes de gerar
+    showStep2(data,md,ld,score);
 
   }catch(err){
     document.getElementById('loading').style.display='none';
@@ -857,6 +1131,8 @@ function buildReport(data,md,ld,score){
 
   // ══ DETALHE POR PÁGINA ══
   for(const p of ld.pages){
+    const pi=ld.pages.indexOf(p);
+    const customPrint=data.customPrints&&data.customPrints[pi];
     const typeCounts={};p.visuals.forEach(v=>{typeCounts[v.label]=(typeCounts[v.label]||0)+1});
     const badges=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,c])=>badge(`${l} ×${c}`,'b-blue')).join(' ');
     const fonts=[...new Set(p.visuals.flatMap(v=>v.fonts))];
@@ -864,6 +1140,7 @@ function buildReport(data,md,ld,score){
     html+=`<div class="page">${pageHeader(`3. Páginas · ${esc(p.name)}`,fname)}
     <div class="page-body">
       ${secTitle(`3. ${esc(p.name)}`,`${p.type} · ${p.width}×${p.height}px · ${p.visuals.length} visuais${hiddenCount?` · ${hiddenCount} oculto(s)`:''}`)}
+      ${customPrint?`<div style="margin-bottom:14px;border-radius:10px;overflow:hidden;border:2px solid #4f8ef733;box-shadow:0 2px 16px rgba(79,142,247,.12)"><img src="${customPrint}" style="width:100%;display:block;max-height:300px;object-fit:contain;background:#f8f9ff"><div style="background:#f0f4ff;padding:6px 12px;font-size:10px;color:#4f8ef7;font-weight:700;letter-spacing:.5px">📸 CAPTURA DE TELA — ${esc(p.name)}</div></div>`:''}
       <div style="margin-bottom:10px">${badges}</div>
       ${fonts.length?`<div style="font-size:10px;color:#999;font-weight:700;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase">Fontes: ${fonts.map(f=>badge(f,'b-navy')).join(' ')}</div>`:''}
       ${tbl(['Tipo','Título','Campos Usados','Posição','Oculto'],
@@ -960,13 +1237,18 @@ function buildReport(data,md,ld,score){
     html+=`<div class="page">${pageHeader(`9. Medidas DAX · ${esc(tname)}`,fname)}
     <div class="page-body">
       ${secTitle('9. Medidas DAX',`${tMeasures.length} medida${tMeasures.length!==1?'s':''} · Tabela: ${esc(tname)}`)}
-      ${unusedM.length?alert_(`⚠ Medidas não utilizadas nesta análise: <strong>${unusedM.map(m=>m.name).join(', ')}</strong>`,'a-warn'):''}
+      ${unusedM.length?alert_(`⚠ Medidas realmente não utilizadas (${unusedM.length}): <strong>${unusedM.map(m=>m.name).join(', ')}</strong><br><span style="font-size:11px;font-weight:400">Não aparecem em nenhum visual nem são referenciadas por outras medidas.</span>`,'a-warn'):''}
+      ${tMeasures.filter(m=>m._indirect).length?alert_(`ℹ Medidas de uso indireto (${tMeasures.filter(m=>m._indirect).length}): referenciadas internamente por outras medidas DAX — <strong>estão em uso</strong>, mesmo não aparecendo diretamente em visuais.`,'a-info'):''}
       ${tMeasures.map(m=>`<div class="measure-card${m._unused?' unused':''}">
         <div class="m-table">[${esc(m.table)}]${m.displayFolder?` · 📁 ${esc(m.displayFolder)}`:''}</div>
-        <div class="m-name">${esc(m.name)} ${m._unused?badge('Não utilizada ⚠','b-red'):badge('Em uso','b-green')} ${m.formatString?badge(m.formatString,'b-gray'):''}</div>
+        <div class="m-name">${esc(m.name)}
+          ${m._unused?badge('Não utilizada ⚠','b-red'):m._indirect?badge('Uso indireto ↗','b-yellow'):badge('Uso direto ✓','b-green')}
+          ${m.formatString?badge(m.formatString,'b-gray'):''}
+        </div>
+        ${m._indirect&&m._usedBy&&m._usedBy.length?`<div style="font-size:11px;color:#b06000;margin:3px 0 4px">↗ Referenciada por: <strong>${m._usedBy.slice(0,4).map(n=>esc(n)).join(', ')}${m._usedBy.length>4?' +mais':''}</strong></div>`:''}
         ${m.expression?codeDax(m.expression,m._unused):''}
         ${m.description?`<div style="font-size:11px;color:#888;margin-top:3px">📝 ${esc(m.description)}</div>`:''}
-        ${m._unused?`<div style="font-size:11px;color:#f87171;margin-top:3px">⚠ Esta medida não está sendo utilizada em nenhum visual. Considere remover ou arquivar.</div>`:''}
+        ${m._unused?`<div style="font-size:11px;color:#f87171;margin-top:3px">⚠ Não está sendo utilizada em nenhum visual nem referenciada por outras medidas. Considere remover ou arquivar.</div>`:''}
       </div>`).join('')}
     </div>
     <div class="page-num">${pg++}</div></div>`;
