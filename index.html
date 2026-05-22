@@ -286,9 +286,9 @@ function setLoading(msg){
 function smartDecode(u8){
   if(!u8||!u8.length)return'{}';
   // BOM UTF-16-LE explícito
-  if(u8[0]===0xFF&&u8[1]===0xFE)return new TextDecoder('utf-16-le').decode(u8.slice(2));
+  if(u8[0]===0xFF&&u8[1]===0xFE)return new TextDecoder('utf-16le').decode(u8.slice(2));
   // UTF-16-LE sem BOM: primeiro byte é caractere ASCII, segundo é 0x00
-  if(u8[1]===0x00&&u8[0]!==0x00)return new TextDecoder('utf-16-le').decode(u8);
+  if(u8[1]===0x00&&u8[0]!==0x00)return new TextDecoder('utf-16le').decode(u8);
   // BOM UTF-8
   if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF)return new TextDecoder('utf-8').decode(u8.slice(3));
   // Tenta UTF-8 por padrão
@@ -336,14 +336,18 @@ async function readTxt(zip,name){
 // ─────────────────────────────────────────
 async function processFile(file){
   if(!file)return;
+  console.log('[DocReader] Arquivo:', file.name, file.size+'bytes');
   if(!file.name.toLowerCase().endsWith('.pbit')){
     showError('Selecione um arquivo .pbit (não .pbix)');return;
   }
 
   // Verifica se JSZip carregou
   if(typeof JSZip==='undefined'){
-    showError('Biblioteca JSZip não carregou.\nVerifique sua conexão com a internet e tente novamente.');return;
+    showError('Biblioteca JSZip não carregou.\nVerifique sua conexão com a internet e tente novamente.');
+    console.error('[DocReader] JSZip não definido!');
+    return;
   }
+  console.log('[DocReader] JSZip OK, versão:', JSZip.version||'?');
 
   setLoading('Abrindo '+file.name+'...');
   await sleep(80);
@@ -353,7 +357,9 @@ async function processFile(file){
     let zip;
     try{
       zip=await JSZip.loadAsync(file);
+      console.log('[DocReader] ZIP aberto. Entradas:', Object.keys(zip.files));
     }catch(zipErr){
+      console.error('[DocReader] Erro ZIP:', zipErr);
       showError('Não foi possível abrir o arquivo como ZIP.\n\nErro: '+zipErr.message+'\n\nCertifique-se que o arquivo é um .pbit válido e não está corrompido.');
       document.getElementById('loading').style.display='none';
       document.getElementById('landing').style.display='flex';
@@ -362,8 +368,8 @@ async function processFile(file){
 
     const allNames=Object.keys(zip.files);
     const fileNames=allNames.filter(n=>!n.endsWith('/'));
+    console.log('[DocReader] Arquivos no ZIP:', fileNames);
 
-    // 2. Diagnóstico dos arquivos encontrados
     setLoading('Encontrados '+fileNames.length+' arquivos no ZIP...');
     await sleep(40);
 
@@ -372,16 +378,21 @@ async function processFile(file){
     await sleep(30);
     let schema={}, schemaInfo='não encontrado';
     const schemaKey=findZipEntry(zip,'DataModelSchema');
+    console.log('[DocReader] schemaKey:', schemaKey);
     if(schemaKey){
       try{
         const u8=await zip.files[schemaKey].async('uint8array');
-        schemaInfo=u8.length+' bytes, bytes[0-3]=['+Array.from(u8.slice(0,4)).map(b=>'0x'+b.toString(16)).join(',')+']';
+        const b03=Array.from(u8.slice(0,4)).map(b=>'0x'+b.toString(16).padStart(2,'0')).join(' ');
+        console.log('[DocReader] Schema bytes[0-3]:', b03, '| tamanho:', u8.length);
+        schemaInfo=u8.length+' bytes, bytes=['+b03+']';
         const decoded=smartDecode(u8);
-        schemaInfo+=' decoded[0:30]="'+decoded.substring(0,30)+'"';
+        console.log('[DocReader] Schema decoded[0:80]:', decoded.substring(0,80));
+        schemaInfo+=' decoded[0:50]="'+decoded.substring(0,50)+'"';
         schema=safeParse(decoded);
         const tc=((schema.model||schema).tables||[]).length;
-        schemaInfo+=' → '+tc+' tabelas';
-      }catch(e){schemaInfo='erro: '+e.message;}
+        console.log('[DocReader] Schema keys:', Object.keys(schema), '| tabelas:', tc);
+        schemaInfo+=' → '+tc+' tabelas (keys: '+Object.keys(schema).slice(0,5).join(',')+')';
+      }catch(e){console.error('[DocReader] Erro schema:', e);schemaInfo='erro: '+e.message;}
     }
 
     // 4. Lê Report/Layout com diagnóstico
@@ -389,6 +400,7 @@ async function processFile(file){
     await sleep(30);
     let layout={}, layoutInfo='não encontrado';
     const layoutKey=findZipEntry(zip,'Report/Layout');
+    console.log('[DocReader] layoutKey:', layoutKey);
     if(layoutKey){
       try{
         const u8=await zip.files[layoutKey].async('uint8array');
@@ -396,16 +408,18 @@ async function processFile(file){
         const decoded=smartDecode(u8);
         layout=safeParse(decoded);
         const pc=(layout.sections||[]).length;
+        console.log('[DocReader] Layout keys:', Object.keys(layout), '| páginas:', pc);
         layoutInfo+=' → '+pc+' páginas';
-      }catch(e){layoutInfo='erro: '+e.message;}
+      }catch(e){console.error('[DocReader] Erro layout:', e);layoutInfo='erro: '+e.message;}
     }
 
     // 5. Verifica se temos dados
     const tableCount=((schema.model||schema).tables||[]).length;
     const pageCount=(layout.sections||[]).length;
+    console.log('[DocReader] RESULTADO: tableCount='+tableCount+' pageCount='+pageCount);
 
     if(tableCount===0&&pageCount===0){
-      // Mostra diagnóstico completo para debugging
+      console.warn('[DocReader] Sem dados! Mostrando diagnóstico.');
       document.getElementById('loading').style.display='none';
       document.getElementById('landing').style.display='flex';
       showDiagnostic(fileNames, schemaKey, schemaInfo, layoutKey, layoutInfo);
