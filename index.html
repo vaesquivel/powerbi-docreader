@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Power BI DocReader v1.0</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:#e8e8e8;color:#1a1a2e}
@@ -339,70 +339,147 @@ async function processFile(file){
   if(!file.name.toLowerCase().endsWith('.pbit')){
     showError('Selecione um arquivo .pbit (não .pbix)');return;
   }
+
+  // Verifica se JSZip carregou
+  if(typeof JSZip==='undefined'){
+    showError('Biblioteca JSZip não carregou.\nVerifique sua conexão com a internet e tente novamente.');return;
+  }
+
   setLoading('Abrindo '+file.name+'...');
   await sleep(80);
+
   try{
-    const zip=await JSZip.loadAsync(file);
-    const names=Object.keys(zip.files);
-    const log=[];
+    // 1. Abre o ZIP
+    let zip;
+    try{
+      zip=await JSZip.loadAsync(file);
+    }catch(zipErr){
+      showError('Não foi possível abrir o arquivo como ZIP.\n\nErro: '+zipErr.message+'\n\nCertifique-se que o arquivo é um .pbit válido e não está corrompido.');
+      document.getElementById('loading').style.display='none';
+      document.getElementById('landing').style.display='flex';
+      return;
+    }
 
-    setLoading('Lendo DataModelSchema...');await sleep(30);
-    const schema=await readJSON(zip,'DataModelSchema');
-    const hasTables=(schema.model||schema).tables;
-    log.push((hasTables?'✓':'⚠')+' DataModelSchema: '+(hasTables?(hasTables.length+' tabelas'):'vazio'));
+    const allNames=Object.keys(zip.files);
+    const fileNames=allNames.filter(n=>!n.endsWith('/'));
 
-    setLoading('Lendo Report/Layout...');await sleep(30);
-    const layout=await readJSON(zip,'Report/Layout');
-    const hasSections=layout.sections;
-    log.push((hasSections?'✓':'⚠')+' Report/Layout: '+(hasSections?(hasSections.length+' páginas'):'vazio'));
+    // 2. Diagnóstico dos arquivos encontrados
+    setLoading('Encontrados '+fileNames.length+' arquivos no ZIP...');
+    await sleep(40);
 
+    // 3. Lê DataModelSchema com diagnóstico detalhado
+    setLoading('Lendo DataModelSchema...');
+    await sleep(30);
+    let schema={}, schemaInfo='não encontrado';
+    const schemaKey=findZipEntry(zip,'DataModelSchema');
+    if(schemaKey){
+      try{
+        const u8=await zip.files[schemaKey].async('uint8array');
+        schemaInfo=u8.length+' bytes, bytes[0-3]=['+Array.from(u8.slice(0,4)).map(b=>'0x'+b.toString(16)).join(',')+']';
+        const decoded=smartDecode(u8);
+        schemaInfo+=' decoded[0:30]="'+decoded.substring(0,30)+'"';
+        schema=safeParse(decoded);
+        const tc=((schema.model||schema).tables||[]).length;
+        schemaInfo+=' → '+tc+' tabelas';
+      }catch(e){schemaInfo='erro: '+e.message;}
+    }
+
+    // 4. Lê Report/Layout com diagnóstico
+    setLoading('Lendo Report/Layout...');
+    await sleep(30);
+    let layout={}, layoutInfo='não encontrado';
+    const layoutKey=findZipEntry(zip,'Report/Layout');
+    if(layoutKey){
+      try{
+        const u8=await zip.files[layoutKey].async('uint8array');
+        layoutInfo=u8.length+' bytes';
+        const decoded=smartDecode(u8);
+        layout=safeParse(decoded);
+        const pc=(layout.sections||[]).length;
+        layoutInfo+=' → '+pc+' páginas';
+      }catch(e){layoutInfo='erro: '+e.message;}
+    }
+
+    // 5. Verifica se temos dados
+    const tableCount=((schema.model||schema).tables||[]).length;
+    const pageCount=(layout.sections||[]).length;
+
+    if(tableCount===0&&pageCount===0){
+      // Mostra diagnóstico completo para debugging
+      document.getElementById('loading').style.display='none';
+      document.getElementById('landing').style.display='flex';
+      showDiagnostic(fileNames, schemaKey, schemaInfo, layoutKey, layoutInfo);
+      return;
+    }
+
+    // 6. Lê demais metadados
     setLoading('Lendo metadados...');await sleep(30);
     const connections=await readJSON(zip,'Connections');
     const version=await readTxt(zip,'Version');
-
-    const themeFiles=names.filter(n=>n.toLowerCase().includes('basethemes/')&&n.endsWith('.json'));
+    const themeFiles=allNames.filter(n=>n.toLowerCase().includes('basethemes/')&&n.endsWith('.json'));
     const theme=themeFiles.length?await readJSON(zip,themeFiles[0]):{};
     const themeFile=themeFiles.length?themeFiles[0].split('/').pop():'';
-
-    const cvFiles=names.filter(n=>n.endsWith('package.json')&&n.toLowerCase().includes('customvisuals'));
+    const cvFiles=allNames.filter(n=>n.endsWith('package.json')&&n.toLowerCase().includes('customvisuals'));
     const cvs=[];
     for(const f of cvFiles){try{const p=await readJSON(zip,f);if(p&&p.name)cvs.push(p)}catch(e){}}
+    const staticRes=allNames.filter(n=>n.toLowerCase().includes('registeredresources/')&&!n.endsWith('/')).map(n=>n.split('/').pop());
 
-    const staticRes=names.filter(n=>n.toLowerCase().includes('registeredresources/')&&!n.endsWith('/')).map(n=>n.split('/').pop());
-    const zipFiles=names.filter(n=>!n.endsWith('/'));
-    log.push('✓ Arquivos no ZIP: '+zipFiles.length);
-    log.push('✓ Visuais customizados: '+cvs.length);
-    log.push('✓ Recursos estáticos: '+staticRes.length);
-
-    setLoading('Processando modelo...\n'+log.join('\n'));await sleep(50);
-
-    const data={filename:file.name,schema,layout,connections,version,theme,themeFile,customVisuals:cvs,staticResources:staticRes,zipFiles,generated:new Date()};
+    // 7. Processa e renderiza
+    setLoading('Processando modelo: '+tableCount+' tabelas, '+pageCount+' páginas...');await sleep(50);
+    const data={filename:file.name,schema,layout,connections,version,theme,themeFile,customVisuals:cvs,staticResources:staticRes,zipFiles:fileNames,generated:new Date()};
     const md=processSchema(schema);
     const ld=processLayout(layout);
-
-    // Rastrear medidas usadas
     const usedNames=new Set();
     ld.pages.forEach(pg=>pg.visuals.forEach(v=>v.usedMeasures.forEach(m=>usedNames.add(m))));
-    md.measures.forEach(m=>{
-      m._used=usedNames.size===0||usedNames.has(m.name);
-      m._unused=usedNames.size>0&&!usedNames.has(m.name);
-    });
-
+    md.measures.forEach(m=>{m._used=usedNames.size===0||usedNames.has(m.name);m._unused=usedNames.size>0&&!usedNames.has(m.name)});
     const score=calcScore(md);
 
     setLoading('Gerando documentação...');await sleep(30);
-    document.getElementById('tbFilename').textContent='— '+file.name;
-    document.getElementById('loading').style.display='none';
-    document.getElementById('toolbar').style.display='flex';
-    document.getElementById('reportWrap').style.display='block';
-    renderReport(data,md,ld,score);
+
+    try{
+      const html=buildReport(data,md,ld,score);
+      document.getElementById('tbFilename').textContent='— '+file.name;
+      document.getElementById('loading').style.display='none';
+      document.getElementById('toolbar').style.display='flex';
+      document.getElementById('reportWrap').style.display='block';
+      document.getElementById('reportWrap').innerHTML=html;
+    }catch(renderErr){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('landing').style.display='flex';
+      showError('Erro ao gerar o relatório: '+renderErr.message);
+      console.error('renderReport error:',renderErr);
+    }
 
   }catch(err){
     document.getElementById('loading').style.display='none';
     document.getElementById('landing').style.display='flex';
-    showError('Erro ao processar o arquivo: '+err.message+'\n\nVerifique se o arquivo é realmente um .pbit válido.');
+    showError('Erro inesperado: '+err.message);
     console.error('processFile error:',err);
   }
+}
+
+function showDiagnostic(fileNames, schemaKey, schemaInfo, layoutKey, layoutInfo){
+  const filesHtml=fileNames.slice(0,30).map(f=>'  • '+f).join('\n');
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  d.innerHTML=`<div style="background:#1a1a2e;border:1px solid #f59e0b;border-radius:14px;padding:28px 32px;max-width:580px;width:100%;font-family:DM Sans,sans-serif;color:#e2e8f0">
+    <div style="font-size:22px;font-weight:800;color:#f59e0b;margin-bottom:16px">⚠ Diagnóstico do arquivo</div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:16px">O arquivo foi aberto mas não gerou dados. Informações para diagnóstico:</p>
+    <div style="background:#0d1117;border-radius:8px;padding:14px;font-family:JetBrains Mono,monospace;font-size:11px;color:#7dd3fc;margin-bottom:12px;white-space:pre-wrap">DataModelSchema: ${schemaKey||'NÃO ENCONTRADO'}
+Info: ${schemaInfo}
+
+Report/Layout: ${layoutKey||'NÃO ENCONTRADO'}
+Info: ${layoutInfo}
+
+Arquivos no ZIP (${fileNames.length} total):
+${filesHtml}${fileNames.length>30?'\n  ... e mais '+(fileNames.length-30)+' arquivos':''}</div>
+    <p style="font-size:12px;color:#64748b;margin-bottom:16px">Copie as informações acima e envie para diagnóstico.</p>
+    <div style="display:flex;gap:10px">
+      <button onclick="navigator.clipboard&&navigator.clipboard.writeText(this.closest('div[style]').querySelector('div[style*=monospace]').textContent)" style="flex:1;background:#4f8ef7;border:none;color:#fff;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">📋 Copiar diagnóstico</button>
+      <button onclick="this.closest('div[style*=inset]').remove()" style="flex:1;background:#334155;border:none;color:#fff;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
 }
 
 function showError(msg){
@@ -505,7 +582,7 @@ function typeBadge(t){
 // ─────────────────────────────────────────
 // RENDER PRINCIPAL
 // ─────────────────────────────────────────
-function renderReport(data,md,ld,score){
+function buildReport(data,md,ld,score){
   const fname=data.filename.replace('.pbit','');
   const gen=data.generated.toLocaleString('pt-BR');
   const sc=scoreColor(score);
@@ -845,7 +922,7 @@ function renderReport(data,md,ld,score){
   </div>
   <div class="page-num">${pg++}</div></div>`;
 
-  document.getElementById('reportWrap').innerHTML=html;
+  return html;
 }
 </script>
 </body>
