@@ -281,24 +281,54 @@ function setLoading(msg){
 }
 
 // ─────────────────────────────────────────
-// Decodificação UTF-16-LE
+// Decodificação UTF-16-LE (robusta)
 // ─────────────────────────────────────────
 function smartDecode(u8){
   if(!u8||!u8.length)return'{}';
+  // BOM UTF-16-LE explícito
   if(u8[0]===0xFF&&u8[1]===0xFE)return new TextDecoder('utf-16-le').decode(u8.slice(2));
-  if((u8[0]===0x7B&&u8[1]===0x00)||(u8[0]===0x5B&&u8[1]===0x00))return new TextDecoder('utf-16-le').decode(u8);
+  // UTF-16-LE sem BOM: primeiro byte é caractere ASCII, segundo é 0x00
+  if(u8[1]===0x00&&u8[0]!==0x00)return new TextDecoder('utf-16-le').decode(u8);
+  // BOM UTF-8
   if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF)return new TextDecoder('utf-8').decode(u8.slice(3));
-  return new TextDecoder('utf-8').decode(u8);
+  // Tenta UTF-8 por padrão
+  try{return new TextDecoder('utf-8').decode(u8)}catch(e){return'{}'}
 }
 function safeParse(txt){
-  try{const c=txt.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').trim();return c?JSON.parse(c):{}}
-  catch(e){return{}}
+  if(!txt||!txt.trim())return{};
+  // Remove caracteres de controle exceto \t \n \r
+  const c=txt.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').trim();
+  if(!c)return{};
+  try{return JSON.parse(c)}
+  catch(e){
+    // Tenta extrair JSON válido do início
+    const m=c.match(/^(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if(m){try{return JSON.parse(m[1])}catch(e2){}}
+    return{};
+  }
 }
+
+// Busca entrada no ZIP sem diferenciar maiúsculas/minúsculas
+function findZipEntry(zip,targetName){
+  const lower=targetName.toLowerCase();
+  return Object.keys(zip.files).find(k=>k.toLowerCase()===lower)||null;
+}
+
 async function readJSON(zip,name){
-  try{const e=zip.files[name];if(!e)return{};return safeParse(smartDecode(await e.async('uint8array')))}catch{return{}}
+  try{
+    const key=findZipEntry(zip,name);
+    if(!key)return{};
+    const u8=await zip.files[key].async('uint8array');
+    return safeParse(smartDecode(u8));
+  }catch(e){console.warn('readJSON error',name,e);return{}}
 }
 async function readTxt(zip,name){
-  try{const e=zip.files[name];if(!e)return'';return smartDecode(await e.async('uint8array')).trim().replace(/^"|"$/g,'')}catch{return''}
+  try{
+    const key=findZipEntry(zip,name);
+    if(!key)return'';
+    const u8=await zip.files[key].async('uint8array');
+    return smartDecode(u8).trim().replace(/^"|"$/g,'');
+  }catch(e){return''}
 }
 
 // ─────────────────────────────────────────
@@ -306,45 +336,82 @@ async function readTxt(zip,name){
 // ─────────────────────────────────────────
 async function processFile(file){
   if(!file)return;
-  if(!file.name.endsWith('.pbit')){alert('Selecione um arquivo .pbit');return}
-  setLoading('Lendo '+file.name+'...');
-  await sleep(50);
+  if(!file.name.toLowerCase().endsWith('.pbit')){
+    showError('Selecione um arquivo .pbit (não .pbix)');return;
+  }
+  setLoading('Abrindo '+file.name+'...');
+  await sleep(80);
   try{
     const zip=await JSZip.loadAsync(file);
     const names=Object.keys(zip.files);
-    setLoading('Processando modelo...');await sleep(30);
+    const log=[];
+
+    setLoading('Lendo DataModelSchema...');await sleep(30);
     const schema=await readJSON(zip,'DataModelSchema');
+    const hasTables=(schema.model||schema).tables;
+    log.push((hasTables?'✓':'⚠')+' DataModelSchema: '+(hasTables?(hasTables.length+' tabelas'):'vazio'));
+
+    setLoading('Lendo Report/Layout...');await sleep(30);
     const layout=await readJSON(zip,'Report/Layout');
+    const hasSections=layout.sections;
+    log.push((hasSections?'✓':'⚠')+' Report/Layout: '+(hasSections?(hasSections.length+' páginas'):'vazio'));
+
+    setLoading('Lendo metadados...');await sleep(30);
     const connections=await readJSON(zip,'Connections');
     const version=await readTxt(zip,'Version');
-    const themeFiles=names.filter(n=>n.startsWith('Report/StaticResources/SharedResources/BaseThemes/')&&n.endsWith('.json'));
+
+    const themeFiles=names.filter(n=>n.toLowerCase().includes('basethemes/')&&n.endsWith('.json'));
     const theme=themeFiles.length?await readJSON(zip,themeFiles[0]):{};
     const themeFile=themeFiles.length?themeFiles[0].split('/').pop():'';
-    const cvFiles=names.filter(n=>n.endsWith('package.json')&&n.includes('CustomVisuals'));
+
+    const cvFiles=names.filter(n=>n.endsWith('package.json')&&n.toLowerCase().includes('customvisuals'));
     const cvs=[];
-    for(const f of cvFiles){const p=await readJSON(zip,f);if(p.name)cvs.push(p)}
-    const staticRes=names.filter(n=>n.includes('StaticResources/RegisteredResources/')&&!n.endsWith('/')).map(n=>n.split('/').pop());
+    for(const f of cvFiles){try{const p=await readJSON(zip,f);if(p&&p.name)cvs.push(p)}catch(e){}}
+
+    const staticRes=names.filter(n=>n.toLowerCase().includes('registeredresources/')&&!n.endsWith('/')).map(n=>n.split('/').pop());
     const zipFiles=names.filter(n=>!n.endsWith('/'));
-    setLoading('Gerando documentação...');await sleep(30);
+    log.push('✓ Arquivos no ZIP: '+zipFiles.length);
+    log.push('✓ Visuais customizados: '+cvs.length);
+    log.push('✓ Recursos estáticos: '+staticRes.length);
+
+    setLoading('Processando modelo...\n'+log.join('\n'));await sleep(50);
+
     const data={filename:file.name,schema,layout,connections,version,theme,themeFile,customVisuals:cvs,staticResources:staticRes,zipFiles,generated:new Date()};
     const md=processSchema(schema);
     const ld=processLayout(layout);
-    // rastrear medidas usadas
+
+    // Rastrear medidas usadas
     const usedNames=new Set();
     ld.pages.forEach(pg=>pg.visuals.forEach(v=>v.usedMeasures.forEach(m=>usedNames.add(m))));
-    md.measures.forEach(m=>{m._used=usedNames.size===0||usedNames.has(m.name);m._unused=usedNames.size>0&&!usedNames.has(m.name)});
+    md.measures.forEach(m=>{
+      m._used=usedNames.size===0||usedNames.has(m.name);
+      m._unused=usedNames.size>0&&!usedNames.has(m.name);
+    });
+
     const score=calcScore(md);
+
+    setLoading('Gerando documentação...');await sleep(30);
     document.getElementById('tbFilename').textContent='— '+file.name;
     document.getElementById('loading').style.display='none';
     document.getElementById('toolbar').style.display='flex';
     document.getElementById('reportWrap').style.display='block';
     renderReport(data,md,ld,score);
+
   }catch(err){
     document.getElementById('loading').style.display='none';
     document.getElementById('landing').style.display='flex';
-    alert('Erro ao processar: '+err.message);console.error(err);
+    showError('Erro ao processar o arquivo: '+err.message+'\n\nVerifique se o arquivo é realmente um .pbit válido.');
+    console.error('processFile error:',err);
   }
 }
+
+function showError(msg){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #f87171;border-radius:14px;padding:28px 36px;max-width:480px;z-index:9999;text-align:center;color:#fca5a5;font-family:DM Sans,sans-serif';
+  d.innerHTML='<div style="font-size:28px;margin-bottom:12px">⚠</div><div style="font-size:14px;line-height:1.6;white-space:pre-wrap">'+msg+'</div><button onclick="this.parentNode.remove()" style="margin-top:18px;background:#f87171;border:none;color:#fff;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">Fechar</button>';
+  document.body.appendChild(d);
+}
+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 // ─────────────────────────────────────────
