@@ -28,10 +28,11 @@ body{font-family:'DM Sans',sans-serif;background:#e8e8e8;color:#1a1a2e}
 .dz-text span{color:#4f8ef7}
 .dz-sub{color:#475569;font-size:13px}
 #fileInput{display:none}
-.features{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:600px}
-.feat{background:#131c2e;border:1px solid #1e3a5f;border-radius:10px;padding:13px 14px;display:flex;flex-direction:column;align-items:center;gap:5px;width:108px;text-align:center}
-.feat .fi{font-size:19px}
-.feat .ft{font-size:10px;color:#64748b;line-height:1.35;font-weight:500}
+.features{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:660px}
+.feat{background:#131c2e;border:1px solid #1e3a5f;border-radius:14px;padding:18px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:9px;width:104px;text-align:center;transition:all .22s;cursor:default}
+.feat:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.feat .fi{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.feat .ft{font-size:10px;color:#64748b;line-height:1.45;font-weight:600}
 .credit{margin-top:24px;color:#334155;font-size:11px;text-align:center}
 
 /* ── PASSO A PASSO ── */
@@ -269,11 +270,38 @@ tbody tr:hover td{background:#f0f4ff}
     <input type="file" id="fileInput" accept=".pbit">
   </div>
   <div class="features">
-    <div class="feat"><div class="fi">Σ</div><div class="ft">Medidas DAX + não usadas</div></div>
-    <div class="feat"><div class="fi">🗂</div><div class="ft">Tabelas + tipos automáticos</div></div>
-    <div class="feat"><div class="fi">⇄</div><div class="ft">Relações + direção</div></div>
-    <div class="feat"><div class="fi">⚙</div><div class="ft">Power Query (código M)</div></div>
-    <div class="feat"><div class="fi">👁</div><div class="ft">Visuais + campos + filtros</div></div>
+    <div class="feat" style="border-color:#4f8ef733">
+      <div class="fi" style="background:linear-gradient(135deg,#1e3a6e,#2a4d8f);border:1px solid #4f8ef744">🧮</div>
+      <div class="ft" style="color:#7ab4ff">Medidas DAX<br>+ uso indireto</div>
+    </div>
+    <div class="feat" style="border-color:#a78bfa33">
+      <div class="fi" style="background:linear-gradient(135deg,#2d1b69,#3d2580);border:1px solid #a78bfa44">🗄️</div>
+      <div class="ft" style="color:#c4b5fd">Tabelas<br>+ tipos</div>
+    </div>
+    <div class="feat" style="border-color:#34d39933">
+      <div class="fi" style="background:linear-gradient(135deg,#064e3b,#065f46);border:1px solid #34d39944">🔗</div>
+      <div class="ft" style="color:#6ee7b7">Relações<br>+ direção</div>
+    </div>
+    <div class="feat" style="border-color:#f59e0b33">
+      <div class="fi" style="background:linear-gradient(135deg,#78350f,#92400e);border:1px solid #f59e0b44">⚡</div>
+      <div class="ft" style="color:#fcd34d">Power Query<br>(código M)</div>
+    </div>
+    <div class="feat" style="border-color:#f472b633">
+      <div class="fi" style="background:linear-gradient(135deg,#831843,#9d174d);border:1px solid #f472b644">📊</div>
+      <div class="ft" style="color:#f9a8d4">Visuais<br>+ campos</div>
+    </div>
+    <div class="feat" style="border-color:#38bdf833">
+      <div class="fi" style="background:linear-gradient(135deg,#0c4a6e,#075985);border:1px solid #38bdf844">📸</div>
+      <div class="ft" style="color:#7dd3fc">Capturas<br>de tela</div>
+    </div>
+    <div class="feat" style="border-color:#fb923c33">
+      <div class="fi" style="background:linear-gradient(135deg,#7c2d12,#9a3412);border:1px solid #fb923c44">🏆</div>
+      <div class="ft" style="color:#fdba74">Score de<br>qualidade</div>
+    </div>
+    <div class="feat" style="border-color:#f8717133">
+      <div class="fi" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid #f8717144">🔒</div>
+      <div class="ft" style="color:#fca5a5">Segurança<br>RLS</div>
+    </div>
   </div>
 
   <!-- ── PASSO A PASSO ── -->
