@@ -327,13 +327,30 @@ tbody tr:hover td{background:#f0f4ff}
   <div class="howto-wrap" style="margin-top:12px">
     <button class="howto-toggle" onclick="toggleChangelog()" id="changelogBtn">
       <span>📋</span> Histórico de versões
-      <span style="margin-left:6px;background:#dcfce7;border:1px solid #bbf7d0;color:#16a34a;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">v1.6 — atual</span>
+      <span style="margin-left:6px;background:#dcfce7;border:1px solid #bbf7d0;color:#16a34a;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">v1.7 — atual</span>
       <span class="howto-arrow" id="changelogArrow">▾</span>
     </button>
     <div class="howto-body" id="changelogBody" style="padding:0">
       <div class="cl-list">
 
         <div class="cl-item cl-current">
+          <div class="cl-ver">v1.7</div>
+          <div class="cl-content">
+            <div class="cl-title">Relatório compacto com campos por visual + Python</div>
+            <div class="cl-tags"><span class="cl-tag feat">novo</span><span class="cl-tag fix">fix</span></div>
+            <ul class="cl-notes">
+              <li>Seção 3 redesenhada: visuais de dados mostram <strong>campos e medidas utilizados</strong> por cada visual</li>
+              <li>Visuais decorativos (formas, imagens, textos) agrupados em <strong>resumo único</strong> — sem repetição</li>
+              <li>Seção 4 (Painel de Seleção / Z-order) removida — informação redundante</li>
+              <li>🐍 <strong>Scripts Python detectados automaticamente</strong> dentro do Power Query (M)</li>
+              <li>Conteúdo do ZIP exibido como <strong>tabela detalhada</strong> — explica o que é cada arquivo</li>
+              <li>Explicação de <strong>Compatibilidade</strong> e <strong>código de Tema</strong> na seção de metadados</li>
+              <li>Extração de <strong>colunas e medidas</strong> por visual (além de apenas medidas)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="cl-item">
           <div class="cl-ver">v1.6</div>
           <div class="cl-content">
             <div class="cl-title">Análise de dependências DAX</div>
@@ -431,7 +448,7 @@ tbody tr:hover td{background:#f0f4ff}
     </div>
   </div>
 
-  <p class="credit" style="margin-top:20px">Desenvolvido por Vanessa Costa · Power BI DocReader v1.6 · Powered by IA Claude (Anthropic)</p>
+  <p class="credit" style="margin-top:20px">Desenvolvido por Vanessa Costa · Power BI DocReader v1.7 · Powered by IA Claude (Anthropic)</p>
 </div>
 
 <!-- ── LOADING ── -->
@@ -911,7 +928,7 @@ function processSchema(schema){
     }
     res.tables.push(tinfo);
     for(const m of measures){let ex=m.expression||'';if(Array.isArray(ex))ex=ex.join('\n');res.measures.push({table:n,name:m.name||'',expression:ex,formatString:m.formatString||'',description:m.description||'',displayFolder:m.displayFolder||'',hidden:!!m.isHidden})}
-    for(const p of (tbl.partitions||[])){const src=p.source||{};if(src.type==='m'){let ex=src.expression||'';if(Array.isArray(ex))ex=ex.join('\n');if(ex)res.partitionsM.push({table:n,partition:p.name||'',mode:p.mode||'',expression:ex})}}
+    for(const p of (tbl.partitions||[])){const src=p.source||{};if(src.type==='m'){let ex=src.expression||'';if(Array.isArray(ex))ex=ex.join('\n');if(ex){const pyScripts=[];for(const pm of ex.matchAll(/Python\.Execute\s*\(\s*"((?:[^"\\]|\\[\s\S])*)"/g)){pyScripts.push(pm[1].replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\"/g,'"').replace(/\\\\/g,'\\'))}res.partitionsM.push({table:n,partition:p.name||'',mode:p.mode||'',expression:ex,pythonScripts:pyScripts})}}}
   }
   for(const r of (model.relationships||[]))res.relations.push({fromTable:r.fromTable||'',fromCol:r.fromColumn||'',toTable:r.toTable||'',toCol:r.toColumn||'',direction:r.crossFilteringBehavior||'oneDirection',active:r.isActive!==false});
   return res;
@@ -933,8 +950,9 @@ function processLayout(layout){
       let title='';try{const ta=(sv.vcObjects||{}).title||[{}];const tp=(ta[0]||{}).properties||{};const tv=((tp.text||{}).expr||{}).Literal||{};title=(tv.Value||'').replace(/^'|'$/g,'')}catch{}
       const fonts=new Set();xFonts(sv,fonts);
       const usedMeasures=new Set();xMeasures(sv,usedMeasures);
+      const usedFields=new Set();xFields(sv,usedFields);
       const hidden=vc.isHidden===true||cfg.isHidden===true;
-      visuals.push({type:vt,label:vtype(vt),title,x:vc.x||0,y:vc.y||0,w:vc.width||0,h:vc.height||0,hidden,z:vc.z||0,fonts:[...fonts],usedMeasures:[...usedMeasures]});
+      visuals.push({type:vt,label:vtype(vt),title,x:vc.x||0,y:vc.y||0,w:vc.width||0,h:vc.height||0,hidden,z:vc.z||0,fonts:[...fonts],usedMeasures:[...usedMeasures],usedFields:[...usedFields]});
     }
     pages.push({name:sec.displayName||'',width:sec.width||1280,height:sec.height||720,type:pgType,visuals,ordinal:sec.ordinal||0});
   }
@@ -943,6 +961,7 @@ function processLayout(layout){
 }
 function xFonts(o,s){if(!o||typeof o!=='object')return;if(Array.isArray(o)){o.forEach(i=>xFonts(i,s));return}if(o.fontFamily){const v=o.fontFamily;if(typeof v==='string'&&v)s.add(v);else if(typeof v==='object'){const x=((v.expr||{}).Literal||{}).Value||'';if(x)s.add(x.replace(/^'|'$/g,''))}}Object.values(o).forEach(v=>xFonts(v,s))}
 function xMeasures(o,s){if(!o||typeof o!=='object')return;if(Array.isArray(o)){o.forEach(i=>xMeasures(i,s));return}if(o.Measure&&typeof o.Measure==='object'){const n=o.Measure.Property||'';if(n)s.add(n)}Object.values(o).forEach(v=>xMeasures(v,s))}
+function xFields(o,s){if(!o||typeof o!=='object')return;if(Array.isArray(o)){o.forEach(i=>xFields(i,s));return}if(o.Measure&&typeof o.Measure==='object'){const n=o.Measure.Property||'';if(n)s.add('['+n+']')}if(o.Column&&typeof o.Column==='object'){const t=((o.Column.Expression||{}).SourceRef||{}).Entity||'';const n=o.Column.Property||'';if(n)s.add(t?t+'['+n+']':n)}Object.values(o).forEach(v=>xFields(v,s))}
 
 function calcScore(md){
   const unused=md.measures.filter(m=>m._unused).length;
@@ -1031,7 +1050,7 @@ function buildReport(data,md,ld,score){
     </div>
   </div>
   <div class="cover-footer">
-    <div class="cover-footer-l">Gerado por Power BI DocReader v1.0 · Vanessa Costa · IA Claude (Anthropic)</div>
+    <div class="cover-footer-l">Gerado por Power BI DocReader v1.7 · Vanessa Costa · IA Claude (Anthropic)</div>
     <div class="cover-footer-r">Confidencial</div>
   </div>
   <div class="page-num" style="color:#304060">${pg++}</div>
@@ -1062,8 +1081,7 @@ function buildReport(data,md,ld,score){
         ['2','Páginas & Visuais — Visão Geral',p++],
         ['3','Detalhamento por Página ('+pCount+')',p],
       ];p+=pCount;
-      items.push(['4','Painel de Seleção — Camadas',p]);p+=pCount;
-      items.push(['5','Indicadores & Visuais Customizados',p++]);
+      items.push(['4','Indicadores & Visuais Customizados',p++]);
       items.push(['7','Tabelas & Modelo de Dados',p++]);
       items.push(['','  Detalhe por tabela ('+visT+')',p]);p+=visT;
       items.push(['8','Relações do Modelo',p++]);
@@ -1087,12 +1105,45 @@ function buildReport(data,md,ld,score){
       ['Versão Power BI Desktop',data.version||'—'],['Compatibilidade',compat],
       ['Dataset ID',datasetId],['Report ID',reportId],
       ['Tema',themeName],['Arquivos no ZIP',String(data.zipFiles.length)],
-      ['Gerado em',gen],['Gerado por','Vanessa Costa · Power BI DocReader v1.0'],
+      ['Gerado em',gen],['Gerado por','Vanessa Costa · Power BI DocReader v1.7'],
     ])}
-    ${remote.length?alert_('ℹ Este relatório usa conexão remota (Cloud/Service). Os dados são carregados do Power BI Service.','a-info'):''}
-    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
-      ${data.zipFiles.slice(0,20).map(f=>badge(f.split('/').pop().substring(0,30))).join('')}
-    </div>
+    ${(()=>{const hasPy=md.partitionsM.some(p=>p.pythonScripts&&p.pythonScripts.length);if(!remote.length)return'';return alert_(`ℹ <strong>Conexão remota detectada</strong> — Este relatório carrega dados do Power BI Service / DirectQuery.${hasPy?' 🐍 <strong>Script Python identificado</strong> como fonte de dados — ver Seção 11 (Power Query).':''}`, 'a-info')})()}
+    ${(()=>{
+      const CE={'1500':'Power BI 2020 — suporte a modelos compostos básicos','1600':'Power BI 2021+ — Calculation Groups, DirectQuery em modelos compostos avançados','1650':'Power BI 2022+ — relações muitos-para-muitos aprimoradas','1565':'Power BI 2019 — tabelas calculadas'};
+      const cn=CE[compat]||'Motor Analysis Services Tabular — determina quais recursos DAX e do modelo estão disponíveis';
+      const tn=data.themeFile?'Código interno gerado automaticamente pelo Power BI ao importar tema customizado (.json). Não é um nome legível — é um identificador único do arquivo de tema.':data.theme&&data.theme.name?'Tema com nome definido pelo desenvolvedor.':'Tema padrão do Power BI.';
+      return`<div style="font-size:11px;color:#444;margin:10px 0 4px;padding:10px 14px;background:#f0f6ff;border-radius:8px;border-left:3px solid #4f8ef7;line-height:1.7">
+        <strong style="color:#1e40af">Compatibilidade ${esc(compat)}:</strong> ${esc(cn)}<br>
+        <strong style="color:#1e40af">Tema "${esc(themeName)}":</strong> ${esc(tn)}
+      </div>`;
+    })()}
+    <div class="sec-h2">Conteúdo do arquivo .pbit (ZIP)</div>
+    ${(()=>{
+      function dzf(name,cvs){
+        const base=name.split('/').pop()||name;const lo=name.toLowerCase();
+        if(base==='DataModelSchema')return['★ Modelo de Dados','Tabelas, colunas, medidas DAX, relações e código M — arquivo principal do modelo'];
+        if(base==='Layout')return['★ Layout','Páginas, posições, dimensões e config. de todos os visuais do relatório'];
+        if(base==='DiagramLayout')return['Diagrama do Modelo','Layout visual do diagrama de relações (aba Model View)'];
+        if(base==='Connections')return['Conexões','Strings de conexão com fontes de dados e configurações de gateway'];
+        if(base==='Settings')return['Configurações','Configurações gerais e preferências do relatório'];
+        if(base==='Metadata')return['Metadados','Metadados internos do arquivo .pbit'];
+        if(base==='[Content_Types].xml')return['Manifesto ZIP','Padrão Office Open XML — descreve tipos de conteúdo do pacote'];
+        if(base==='Version')return['Versão PBI Desktop','Versão do Power BI Desktop que exportou este template'];
+        if(lo.includes('customvisuals')&&base==='package.json'){
+          const seg=name.split('/');const folder=seg.find((s,i)=>i>0&&s&&s!=='CustomVisuals'&&s!=='package.json')||'';
+          const cv=cvs.find(c=>c.guid&&name.includes(c.guid));
+          return['Visual Customizado',`Pacote: ${cv?(cv.displayName||cv.name||folder.substring(0,28)):folder.substring(0,30)||'Visual de terceiros'}`];
+        }
+        if(lo.includes('registeredresources')||lo.includes('staticresources'))return['Recurso Estático','Imagem ou arquivo de fundo de página embutido no relatório'];
+        if(lo.includes('basethemes'))return['Arquivo de Tema','Definição de cores, fontes e estilos do tema visual aplicado'];
+        if(base==='package.json')return['Pacote Principal','Metadados do pacote Power BI Template'];
+        if(base.endsWith('.pbiviz'))return['Visual (.pbiviz)',`Visual customizado de terceiros: ${base}`];
+        if(/\.(png|jpg|jpeg)$/i.test(base))return['Imagem embutida','Arquivo de imagem (fundo de página, ícone ou logotipo)'];
+        return['Arquivo interno','Componente interno do Power BI Template'];
+      }
+      const rows=data.zipFiles.map(f=>{const[tipo,desc]=dzf(f,data.customVisuals);const base=(f.split('/').pop()||f);return[base.length>38?base.substring(0,38)+'…':base,tipo,desc]});
+      return tbl(['Arquivo no ZIP','Tipo','O que contém'],rows);
+    })()}
   </div>
   <div class="page-num">${pg++}</div></div>`;
 
@@ -1135,59 +1186,52 @@ function buildReport(data,md,ld,score){
   }
 
   // ══ DETALHE POR PÁGINA ══
+  const DECO_T=new Set(['textbox','image','shape','basicShape']);
   for(const p of ld.pages){
     const pi=ld.pages.indexOf(p);
     const customPrint=data.customPrints&&data.customPrints[pi];
+    const dataVis=p.visuals.filter(v=>!DECO_T.has(v.type));
+    const decoVis=p.visuals.filter(v=>DECO_T.has(v.type));
     const typeCounts={};p.visuals.forEach(v=>{typeCounts[v.label]=(typeCounts[v.label]||0)+1});
-    const badges=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,c])=>badge(`${l} ×${c}`,'b-blue')).join(' ');
+    const typeBadges=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([l,c])=>badge(`${l} ×${c}`,'b-blue')).join(' ');
+    const decCounts={};decoVis.forEach(v=>{decCounts[v.label]=(decCounts[v.label]||0)+1});
+    const decSummary=Object.entries(decCounts).map(([l,c])=>`${c}× ${l}`).join(' · ');
     const fonts=[...new Set(p.visuals.flatMap(v=>v.fonts))];
     const hiddenCount=p.visuals.filter(v=>v.hidden).length;
     html+=`<div class="page">${pageHeader(`3. Páginas · ${esc(p.name)}`,fname)}
     <div class="page-body">
-      ${secTitle(`3. ${esc(p.name)}`,`${p.type} · ${p.width}×${p.height}px · ${p.visuals.length} visuais${hiddenCount?` · ${hiddenCount} oculto(s)`:''}`)}
-      ${customPrint?`<div style="margin-bottom:14px;border-radius:10px;overflow:hidden;border:2px solid #4f8ef733;box-shadow:0 2px 16px rgba(79,142,247,.12)"><img src="${customPrint}" style="width:100%;display:block;max-height:300px;object-fit:contain;background:#f8f9ff"><div style="background:#f0f4ff;padding:6px 12px;font-size:10px;color:#4f8ef7;font-weight:700;letter-spacing:.5px">📸 CAPTURA DE TELA — ${esc(p.name)}</div></div>`:''}
-      <div style="margin-bottom:10px">${badges}</div>
-      ${fonts.length?`<div style="font-size:10px;color:#999;font-weight:700;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase">Fontes: ${fonts.map(f=>badge(f,'b-navy')).join(' ')}</div>`:''}
-      ${tbl(['Tipo','Título','Campos Usados','Posição','Oculto'],
-        p.visuals.map(v=>[
-          badge(v.label,'b-blue'),
+      ${secTitle(`3. ${esc(p.name)}`,`${p.type} · ${p.visuals.length} visuais${hiddenCount?` · <strong style="color:#c5221f">${hiddenCount} oculto(s)</strong>`:''}`)}
+      ${customPrint?`<div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:2px solid #4f8ef733"><img src="${customPrint}" style="width:100%;display:block;max-height:220px;object-fit:contain;background:#f8f9ff"><div style="background:#f0f4ff;padding:4px 12px;font-size:10px;color:#4f8ef7;font-weight:700">📸 ${esc(p.name)}</div></div>`:''}
+      <div style="margin-bottom:8px">${typeBadges}</div>
+      ${fonts.length?`<div style="font-size:10px;color:#999;font-weight:700;letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase">Fontes: ${fonts.map(f=>badge(f,'b-navy')).join(' ')}</div>`:''}
+      ${dataVis.length?`<div class="sec-h3" style="margin-top:4px">Visuais de dados — campos e medidas utilizados</div>
+      ${tbl(['Visual','Título','Campos / Medidas utilizados'],
+        dataVis.map(v=>[
+          badge(v.label,v.hidden?'b-gray':'b-blue')+(v.hidden?' '+badge('⚠ Oculto','b-red'):''),
           v.title||'—',
-          v.usedMeasures.slice(0,3).map(m=>badge(m,'b-green')).join(' ')||(v.usedMeasures.length?'…':'—'),
-          `(${Math.round(v.x)}, ${Math.round(v.y)})`,
-          v.hidden?'<strong style="color:#c5221f">⚠ Oculto</strong>':'Não'
+          v.usedFields&&v.usedFields.length
+            ? v.usedFields.slice(0,5).map(f=>badge(f,'b-green')).join(' ')+(v.usedFields.length>5?`<span style="font-size:10px;color:#94a3b8"> +${v.usedFields.length-5}</span>`:'')
+            :'—'
         ]),
-        (row,i)=>p.visuals[i]&&p.visuals[i].hidden?'tr-hidden':'')}
+        (row,i)=>dataVis[i]&&dataVis[i].hidden?'tr-hidden':'')}`:
+      alert_('Página sem visuais de dados.','a-info')}
+      ${decSummary?`<div style="font-size:11px;color:#64748b;margin-top:8px;padding:8px 12px;background:#f8faff;border-radius:8px;border:1px solid #e2e8f0">🎨 <strong style="color:#475569">Decorativos (agrupados):</strong> ${esc(decSummary)}</div>`:''}
     </div>
     <div class="page-num">${pg++}</div></div>`;
   }
 
-  // ══ PAINEL DE SELEÇÃO ══
-  for(const p of ld.pages){
-    const sorted=[...p.visuals].sort((a,b)=>b.z-a.z);
-    html+=`<div class="page">${pageHeader(`4. Painel de Seleção · ${esc(p.name)}`,fname)}
-    <div class="page-body">
-      ${secTitle(`4. ${esc(p.name)} — Camadas (Z-order)`,'Equivalente ao Painel de Seleção do Power BI Desktop')}
-      ${sorted.map((v,i)=>`<div class="layer-row">
-        <span class="layer-num">${i+1}</span>
-        ${badge(v.label,v.hidden?'b-gray':'b-blue')}
-        <span class="layer-name ${v.hidden?'layer-hidden-name':''}">${esc(v.title||v.label)}${v.hidden?' [OCULTO]':''}</span>
-        <span class="layer-info">z:${v.z} · ${Math.round(v.w)}×${Math.round(v.h)}${v.hidden?' · <span style="color:#f87171">oculto via bookmark</span>':''}</span>
-      </div>`).join('')}
-    </div>
-    <div class="page-num">${pg++}</div></div>`;
-  }
 
   // ══ BOOKMARKS ══
-  html+=`<div class="page">${pageHeader('5. Indicadores · 6. Visuais Customizados',fname)}
+  html+=`<div class="page">${pageHeader('4. Indicadores · 5. Visuais Customizados',fname)}
   <div class="page-body">
-    ${secTitle('5. Indicadores (Bookmarks)',`${bCount} indicador${bCount!==1?'es':''} configurado${bCount!==1?'s':''}`)}
+    ${secTitle('4. Indicadores (Bookmarks)',`${bCount} indicador${bCount!==1?'es':''} configurado${bCount!==1?'s':''}`)}
     ${!bCount?alert_('Nenhum indicador (bookmark) configurado neste relatório.','a-info'):
       tbl(['Nome do Indicador','Grupo','Filtros','Visibilidade','Dados'],
         ld.bookmarks.map(b=>[b.name,b.group||'—',b.captureFilters?'✓':'✗',b.captureVisibility?'✓':'✗',b.captureData?'✓':'✗']))}
     <div class="sec-h2">Botões com Ação</div>
     ${(()=>{const btns=ld.pages.flatMap(lp=>lp.visuals.filter(v=>v.type==='actionButton').map(v=>({page:lp.name,...v})));
-    return btns.length?tbl(['Página','Título','Posição','Tamanho'],btns.map(b=>[b.page,b.title||'—',`(${Math.round(b.x)}, ${Math.round(b.y)})`,`${Math.round(b.w)}×${Math.round(b.h)}`])):alert_('Nenhum botão de ação encontrado.','a-info')})()}
-    <div class="sec-h2">6. Visuais Customizados</div>
+    return btns.length?tbl(['Página','Título'],btns.map(b=>[b.page,b.title||'—'])):alert_('Nenhum botão de ação encontrado.','a-info')})()}
+    <div class="sec-h2">5. Visuais Customizados</div>
     ${!data.customVisuals.length?alert_('Nenhum visual customizado encontrado neste relatório.','a-info'):
       alert_('⚠ Visuais customizados precisam estar instalados no tenant do Power BI Service.','a-warn')+
       tbl(['Nome do Visual','Versão','GUID'],data.customVisuals.map(cv=>[cv.displayName||cv.name||'—',cv.version||'—',cv.guid||'—']))}
@@ -1269,13 +1313,19 @@ function buildReport(data,md,ld,score){
   <div class="page-num">${pg++}</div></div>`;
 
   // ══ POWER QUERY ══
+  const totalPy=md.partitionsM.reduce((a,p)=>a+(p.pythonScripts||[]).length,0);
   html+=`<div class="page">${pageHeader('11. Power Query (M)',fname)}
   <div class="page-body">
-    ${secTitle('11. Fontes de Dados & Power Query (M)',`${md.partitionsM.length} partição${md.partitionsM.length!==1?'ões':''} com código M`)}
+    ${secTitle('11. Fontes de Dados & Power Query (M)',`${md.partitionsM.length} partição${md.partitionsM.length!==1?'ões':''} com código M${totalPy?` · 🐍 ${totalPy} script(s) Python`:''}`)}
+    ${totalPy?alert_(`🐍 <strong>Script Python detectado como fonte de dados.</strong> O desenvolvedor usou <code>Python.Execute()</code> dentro do Power Query (M) para carregar dados de uma fonte externa (ex: API do Monday.com). O código Python está exibido abaixo de cada partição onde foi encontrado.`,'a-info'):''}
     ${!md.partitionsM.length?alert_('Nenhuma expressão M (Power Query) encontrada no modelo.','a-info'):
       md.partitionsM.map(p=>`<div class="sec-h3">${esc(p.table)} / ${esc(p.partition)}</div>
-      <div style="margin-bottom:6px">${badge(p.mode||'Import','b-blue')} ${badge('m','b-green')}</div>
-      ${codeDax(p.expression)}`).join('')}
+      <div style="margin-bottom:6px">${badge(p.mode||'Import','b-blue')} ${badge('M','b-green')}${(p.pythonScripts||[]).length?` ${badge('🐍 Python','b-purple')}`:''}</div>
+      ${codeDax(p.expression)}
+      ${(p.pythonScripts||[]).length?`<div style="margin-top:8px;padding:10px 12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;border-left:3px solid #7c3aed">
+        <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🐍 Script Python detectado (${p.pythonScripts.length})</div>
+        ${p.pythonScripts.map(py=>codeDax(py)).join('')}
+      </div>`:''}`).join('')}
   </div>
   <div class="page-num">${pg++}</div></div>`;
 
@@ -1350,7 +1400,7 @@ function buildReport(data,md,ld,score){
         <div class="sec-h3" style="margin-top:0">Problemas Identificados</div>
         ${unusedM.length?alert_(`<strong>Medidas não utilizadas (${unusedM.length})</strong> — ${badge('Média','b-yellow')}<br/>${unusedM.map(m=>m.name).join(', ')} não aparecem em nenhum visual. Recomenda-se remover ou arquivar.`,'a-warn'):''}
         ${bidir.length?alert_(`<strong>Relações bidirecionais (${bidir.length})</strong> — ${badge('Alta','b-red')}<br/>Podem causar resultados inesperados e degradação de desempenho em modelos complexos.`,'a-warn'):''}
-        ${hiddenVis?alert_(`<strong>Visuais ocultos (${hiddenVis})</strong> — ${badge('Baixa','b-gray')}<br/>Comportamento esperado para máscaras de bookmark — documentado na seção 4.`,'a-info'):''}
+        ${hiddenVis?alert_(`<strong>Visuais ocultos (${hiddenVis})</strong> — ${badge('Baixa','b-gray')}<br/>Comportamento esperado para máscaras de bookmark — exibidos na seção 3 (Detalhe por Página).`,'a-info'):''}
         ${!allFmt?alert_(`<strong>Medidas sem formatString</strong> — ${badge('Baixa','b-gray')}<br/>${md.measures.filter(m=>!m.formatString).map(m=>m.name).slice(0,5).join(', ')} não têm formato explicitamente definido.`,'a-info'):''}
         ${unusedM.length===0&&bidir.length===0?alert_('✓ Estrutura geral do relatório está sólida. Nenhum problema crítico encontrado.','a-ok'):''}
       </div>
@@ -1372,7 +1422,7 @@ function buildReport(data,md,ld,score){
       <span>${esc(label)}</span>
       <span class="${ok?'ch-ok':detail.startsWith('—')?'ch-neutral':'ch-fail'}">${esc(detail)}</span>
     </div>`).join('')}
-    <div class="alert a-ok" style="margin-top:14px">✓ Análise concluída · Power BI DocReader v1.0 · Desenvolvido por Vanessa Costa com IA Claude (Anthropic)</div>
+    <div class="alert a-ok" style="margin-top:14px">✓ Análise concluída · Power BI DocReader v1.7 · Desenvolvido por Vanessa Costa com IA Claude (Anthropic)</div>
   </div>
   <div class="page-num">${pg++}</div></div>`;
 
